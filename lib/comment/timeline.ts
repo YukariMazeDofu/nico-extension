@@ -1,14 +1,12 @@
 import type { PlacedComment } from './layout';
 
-/** 描画方式ごとの実装。座標は配置の座標系で渡す。 */
+/** 描画器。座標は配置の座標系で渡す。 */
 export interface CommentRenderer {
   /** 配置の座標系から描画先の px への倍率 */
   setScale(scale: number): void;
-  show(c: PlacedComment, nowMs: number): void;
+  show(c: PlacedComment): void;
   hide(c: PlacedComment): void;
-  /** 表示中のコメントを動画の時刻と再生状態に合わせる */
-  sync(nowMs: number, rate: number, playing: boolean): void;
-  /** 毎フレーム、動画の時刻で描き直す */
+  /** 動画の時刻で描き直す */
   frame(nowMs: number): void;
   clear(): void;
   /** 描画先の要素と資源を捨てる */
@@ -22,10 +20,6 @@ export class CommentTimeline {
   private next = 0;
   private readonly shown = new Set<PlacedComment>();
 
-  get size() {
-    return this.shown.size;
-  }
-
   /** `comments` は `startMs` の昇順 */
   constructor(
     private readonly comments: PlacedComment[],
@@ -34,7 +28,7 @@ export class CommentTimeline {
 
   update(nowMs: number) {
     for (let c; (c = this.comments[this.next]) && c.startMs <= nowMs + LOOKAHEAD_MS; this.next++) {
-      if (c.endMs > nowMs) this.show(c, nowMs);
+      if (c.endMs > nowMs) this.show(c);
     }
     for (const c of this.shown) {
       if (c.endMs <= nowMs) {
@@ -57,7 +51,7 @@ export class CommentTimeline {
     }
     this.next = lo;
     for (const c of this.comments.slice(0, lo)) {
-      if (c.endMs > nowMs) this.show(c, nowMs);
+      if (c.endMs > nowMs) this.show(c);
     }
   }
 
@@ -67,8 +61,8 @@ export class CommentTimeline {
     this.next = 0;
   }
 
-  private show(c: PlacedComment, nowMs: number) {
-    this.renderer.show(c, nowMs);
+  private show(c: PlacedComment) {
+    this.renderer.show(c);
     this.shown.add(c);
   }
 }

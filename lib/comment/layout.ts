@@ -111,7 +111,7 @@ function nakaConflicts(a: PlacedComment, b: PlacedComment): boolean {
 const fixedConflicts = (a: PlacedComment, b: PlacedComment) => a.startMs < b.endMs && b.startMs < a.endMs;
 
 /** id から [0, 1) の値を決める。画面に収まらないコメントの位置を開き直しても変えないため。 */
-export function stableRandom(id: string): number {
+function stableRandom(id: string): number {
   let h = 2166136261;
   for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
   return (h >>> 0) / 2 ** 32;

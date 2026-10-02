@@ -1,11 +1,11 @@
 import { cssFont, type PlacedComment } from './layout';
 
-export const STROKE_WIDTH = 2.8;
-export const STROKE_OPACITY = 0.4;
-export const LIVE_OPACITY = 0.5;
+const STROKE_WIDTH = 2.8;
+const STROKE_OPACITY = 0.4;
+const LIVE_OPACITY = 0.5;
 
 /** 縁取りの色（`r g b`）。文字が黒なら白 */
-export const strokeRgb = (c: PlacedComment) => (c.spec.color.toUpperCase() === '#000000' ? '255 255 255' : '0 0 0');
+const strokeRgb = (c: PlacedComment) => (c.spec.color.toUpperCase() === '#000000' ? '255 255 255' : '0 0 0');
 
 export const commentOpacity = (c: PlacedComment) => (c.spec.live ? LIVE_OPACITY : 1);
 

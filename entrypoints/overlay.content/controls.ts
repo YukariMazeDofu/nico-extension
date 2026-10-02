@@ -1,4 +1,3 @@
-import { type BenchPanel, createBenchPanel } from './bench';
 import { mountComments } from './comments';
 import { AUTO_LEVEL, createPlayer } from './player';
 
@@ -115,14 +114,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
       message.textContent = msg;
     },
   });
-  let bench: BenchPanel | undefined;
-  const comments = mountComments(commentRoot, video, player.context, {
-    log,
-    onVisibilityChange: renderComments,
-    onFrame: (s) => bench?.onFrame(s),
-  });
-  bench = createBenchPanel(video, comments, log);
-  stage.append(bench.element);
+  const comments = mountComments(commentRoot, video, player.context, { log, onVisibilityChange: renderComments });
 
   const togglePlay = () => (video.paused ? video.play().catch((e) => log(`play() rejected: ${e}`)) : video.pause());
   const toggleFullscreen = () =>
@@ -258,9 +250,6 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
         case 'c':
           toggleComments();
           break;
-        case 'b':
-          bench?.toggle();
-          break;
         case '<':
           stepRate(-1);
           break;
@@ -284,7 +273,6 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
       clearTimeout(idleTimer);
       clearTimeout(osdTimer);
       if (document.fullscreenElement) document.exitFullscreen();
-      bench?.destroy();
       comments.destroy();
       player.destroy();
     },

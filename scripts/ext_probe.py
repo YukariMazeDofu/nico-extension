@@ -4,7 +4,7 @@
 # ///
 """拡張を読み込んだ headless Chromium で nicovideo.jp のリンククリック→オーバーレイ再生を確かめる。
 video_id を渡すとそのリンクを差し込んでクリックし、省略するとページ内の最初の動画リンクをクリックする。
-再生後にページ要素との重なり、コメントの表示、キーボードショートカット、ホイール操作、画質の切り替えを試し、--recover ではセグメントを一時的に 403 にして復帰を確かめる。
+再生後にページ要素との重なり、コメントの描画と表示 ON/OFF、キーボードショートカット、ホイール操作、画質の切り替えを試し、--recover ではセグメントを一時的に 403 にして復帰を確かめる。
 --shot には再生後の画面を保存する。
 usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ext_probe.py .output/chrome-mv3 <page_url> <seconds> [video_id] [--recover] [--shot out.png]"""
 import argparse
@@ -23,20 +23,29 @@ STATE = f"""() => {{ const r = {SHADOW}; const v = r?.querySelector('video'); co
     return v && {{t: +v.currentTime.toFixed(1), paused: v.paused, rs: v.readyState, err: v.error && v.error.code, h: v.videoHeight,
       vol: +v.volume.toFixed(2), muted: v.muted, rate: v.playbackRate, quality: q.value,
       qualities: [...q.options].map(o => o.textContent), message: r.querySelector('.message').textContent,
-      comments: r.querySelector('.comments').hidden ? 'hidden' : r.querySelectorAll('.comment').length}}; }}"""
+      comments: r.querySelector('.comments').hidden ? 'hidden' : 'shown'}}; }}"""
 
 
-# 各コメントのアニメーション時刻と動画の時刻の差を 100ms ごとに 3 秒間追い、最大の振れ幅を返す
-DRIFT = f"""async () => {{ const r = {SHADOW}, v = r.querySelector('video'), seen = new Map();
-    for (let i = 0; i < 30; i++) {{
-      await new Promise(f => requestAnimationFrame(f));
-      const vt = v.currentTime * 1000;
-      for (const e of r.querySelectorAll('.comment')) {{ const t = e.getAnimations()[0]?.currentTime; if (t == null) continue;
-        if (!seen.has(e)) seen.set(e, []); seen.get(e).push(t - vt); }}
-      await new Promise(f => setTimeout(f, 100));
-    }}
-    const spread = [...seen.values()].filter(x => x.length > 5).map(x => Math.max(...x) - Math.min(...x));
-    return {{n: spread.length, max_spread_ms: Math.round(Math.max(0, ...spread))}}; }}"""
+
+async def comment_shot(page):
+    # 上の OSD と下のコントロールを除く
+    box = await page.evaluate(f"() => {{ const b = {SHADOW}.querySelector('.stage').getBoundingClientRect(); return [b.x, b.y + 60, b.width, b.height - 160]; }}")
+    return await page.screenshot(clip=dict(zip(("x", "y", "width", "height"), box)))
+
+
+async def check_comments(page):
+    """一時停止して、コメント層の画面が C で消え、もう一度 C で同じ画面に戻ることを確かめる。"""
+    await page.evaluate(f"() => {SHADOW}.querySelector('video').pause()")
+    await page.wait_for_timeout(500)
+    shown = await comment_shot(page)
+    await page.keyboard.press("c")
+    await page.wait_for_timeout(1000)
+    hidden = await comment_shot(page)
+    await page.keyboard.press("c")
+    await page.wait_for_timeout(1000)
+    again = await comment_shot(page)
+    print("comments drawn:", shown != hidden, " redrawn after toggle:", shown == again)
+    await page.evaluate(f"() => {SHADOW}.querySelector('video').play()")
 
 
 async def main(a):
@@ -93,10 +102,7 @@ async def main(a):
         print("video:", await page.evaluate(STATE))
         if a.shot:
             await page.screenshot(path=a.shot)
-        print("comments on screen:", await page.evaluate(f"""() => {{ const r = {SHADOW}, box = r.querySelector('.comments').getBoundingClientRect();
-            return [...r.querySelectorAll('.comment')].map(e => e.getBoundingClientRect())
-              .filter(b => b.right > box.left && b.left < box.right).length + ' in ' + Math.round(box.width) + 'x' + Math.round(box.height); }}"""))
-        print("comment drift:", await page.evaluate(DRIFT))
+        await check_comments(page)
         print("covered by others:", await page.evaluate("""() => { const host = document.querySelector('nico-ext-overlay'), other = new Set();
             for (let x = 5; x < innerWidth; x += 40) for (let y = 5; y < innerHeight; y += 40) {
               const e = document.elementFromPoint(x, y); if (e !== host) other.add(e.tagName + '.' + String(e.className).slice(0, 40)); }
@@ -120,11 +126,6 @@ async def main(a):
             osd = await page.evaluate(f"() => {SHADOW}.querySelector('.osd').textContent")
             print(f"wheel {mod or '':<7} {dy:>4}  osd={osd!r:<22}", await page.evaluate(STATE))
 
-        print("comment drift (rate 1.25):", await page.evaluate(DRIFT))
-        await page.keyboard.press("Space")
-        await page.wait_for_timeout(300)
-        print("comment drift (paused):", await page.evaluate(DRIFT))
-        await page.keyboard.press("Space")
 
         lowest = await page.evaluate(f"() => {{ const o = [...{SHADOW}.querySelector('select.quality').options]; return o.at(-1).value; }}")
         await page.evaluate(f"""v => {{ const s = {SHADOW}.querySelector('select.quality'); s.value = v;
