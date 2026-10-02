@@ -1,6 +1,16 @@
 import './style.css';
-import { watchIdFromAnchor } from '@/lib/nico/link';
+import { officialWatchUrl, watchIdFromAnchor, watchIdFromDirectPath } from '@/lib/nico/link';
 import { mountPlayerUi, type PlayerUi } from './controls';
+
+const LEAVE_FALLBACK_MS = 300;
+
+/** 履歴を戻る。戻れなければトップページへ移る。 */
+function leave() {
+  let leaving = false;
+  window.addEventListener('beforeunload', () => (leaving = true), { once: true });
+  if (history.length > 1) history.back();
+  setTimeout(() => leaving || location.replace('/'), history.length > 1 ? LEAVE_FALLBACK_MS : 0);
+}
 
 export default defineContentScript({
   matches: ['https://www.nicovideo.jp/*'],
@@ -9,6 +19,8 @@ export default defineContentScript({
   main(ctx) {
     let close: (() => void) | undefined;
     let playerUi: PlayerUi | undefined;
+    // `/watch/{id}` を直接開いたときは、リダイレクト先のページで開いて閉じたらページを離れる
+    const directId = watchIdFromDirectPath(location.pathname);
 
     const log = (msg: string) => console.info(`[nico-ext] ${msg}`);
 
@@ -28,9 +40,17 @@ export default defineContentScript({
           button.textContent = '✕';
           button.title = '閉じる (Esc)';
           button.addEventListener('click', () => close?.());
+          const official = document.createElement('button');
+          official.className = 'official';
+          official.textContent = '公式で開く';
+          official.title = '公式プレイヤーで開く';
+          official.addEventListener('click', () => {
+            if (directId) location.replace(officialWatchUrl(videoId));
+            else location.assign(officialWatchUrl(videoId));
+          });
           container.append(backdrop);
           playerUi = mountPlayerUi(backdrop, videoId, log);
-          backdrop.append(button);
+          backdrop.append(official, button);
           return playerUi;
         },
         onRemove(mounted) {
@@ -38,12 +58,22 @@ export default defineContentScript({
         },
       });
       ui.mount();
+      if (directId) {
+        close = leave;
+        playerUi?.context.then((c) => (document.title = `${c.data.title} - ニコニコ動画`), () => {});
+        return;
+      }
       close = () => {
         ui.remove();
         close = undefined;
         playerUi = undefined;
       };
     };
+
+    if (directId) {
+      history.replaceState(history.state, '', `/watch/${directId}${location.search}${location.hash}`);
+      open(directId);
+    }
 
     ctx.addEventListener(
       document,

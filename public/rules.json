@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "priority": 2,
+    "action": { "type": "allow" },
+    "condition": {
+      "regexFilter": "^https://www\\.nicovideo\\.jp/watch/[^?]*\\?(.*&)?nico-ext=off(&|$)",
+      "resourceTypes": ["main_frame"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "redirect",
+      "redirect": { "regexSubstitution": "https://www.nicovideo.jp/nico-ext/watch/\\1\\2" }
+    },
+    "condition": {
+      "regexFilter": "^https://www\\.nicovideo\\.jp/watch/((?:sm|nm|so)[0-9]+)/?(\\?.*)?$",
+      "resourceTypes": ["main_frame"]
+    }
+  }
+]

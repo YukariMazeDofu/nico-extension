@@ -1,4 +1,5 @@
 import { mountComments } from './comments';
+import type { WatchContext } from '@/lib/nico/session';
 import { AUTO_LEVEL, createPlayer } from './player';
 
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -12,6 +13,7 @@ const OSD_MS = 800;
 export interface PlayerUi {
   /** 処理したキーなら true */
   handleKey(e: KeyboardEvent): boolean;
+  readonly context: Promise<WatchContext>;
   destroy(): void;
 }
 
@@ -269,6 +271,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
       wake();
       return true;
     },
+    context: player.context,
     destroy() {
       clearTimeout(idleTimer);
       clearTimeout(osdTimer);

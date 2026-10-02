@@ -17,6 +17,7 @@ export interface DomandVariant {
 
 export interface WatchData {
   videoId: string;
+  title: string;
   watchTrackId: string;
   nicosid: string;
   viewer?: { id: number; isPremium: boolean };
@@ -51,6 +52,7 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
   if (!res.ok || !r?.media?.domand) throw new NicoApiError('watch data unavailable', res.status, json.meta?.code);
   return {
     videoId,
+    title: r.video.title,
     watchTrackId: r.client.watchTrackId,
     nicosid: r.client.nicosid,
     viewer: r.viewer ? { id: r.viewer.id, isPremium: r.viewer.isPremium } : undefined,
