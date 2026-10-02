@@ -1,12 +1,11 @@
-import { CssCommentRenderer } from '@/lib/comment/css-renderer';
 import { layoutComments, type MeasureText, STAGE_HEIGHT, STAGE_WIDTH } from '@/lib/comment/layout';
 import { type CommentSpec, toSpec } from '@/lib/comment/spec';
 import { CommentTimeline } from '@/lib/comment/timeline';
+import { WebGlCommentRenderer } from '@/lib/comment/webgl-renderer';
 import { fetchCommentThreads } from '@/lib/nico/comment';
 import type { WatchContext } from '@/lib/nico/session';
 import { commentSettings } from '@/lib/settings';
-
-const SYNC_INTERVAL_MS = 1000;
+import { createMediaClock } from './clock';
 
 export interface CommentHooks {
   log(msg: string): void;
@@ -36,25 +35,24 @@ export function mountComments(
   hooks: CommentHooks,
 ): CommentView {
   const { log } = hooks;
-  const renderer = new CssCommentRenderer(root);
+  let renderer: WebGlCommentRenderer | undefined;
+  try {
+    renderer = new WebGlCommentRenderer(root);
+  } catch (e) {
+    log(`comment renderer failed: ${e}`);
+  }
+  const now = createMediaClock(video);
   let timeline: CommentTimeline | undefined;
   let visible = true;
   let playing = false;
   let destroyed = false;
   let raf = 0;
-  let lastSyncAt = 0;
 
-  const now = () => video.currentTime * 1000;
   const isPlaying = () => !video.paused && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA;
-  const sync = () => {
-    lastSyncAt = performance.now();
-    renderer.sync(now(), video.playbackRate, playing);
-  };
-  const tick = () => {
+  const tick = (time: number) => {
     raf = 0;
     if (!timeline || !visible) return;
-    timeline.update(now());
-    if (performance.now() - lastSyncAt > SYNC_INTERVAL_MS) sync();
+    timeline.update(now(time));
     if (playing) raf = requestAnimationFrame(tick);
   };
   const kick = () => {
@@ -62,14 +60,12 @@ export function mountComments(
   };
   const reseek = () => {
     if (!timeline || !visible) return;
-    sync();
     timeline.seek(now());
     kick();
   };
   const setPlaying = (p: boolean) => {
     playing = p;
-    sync();
-    if (p) kick();
+    kick();
   };
 
   const resize = new ResizeObserver(() => {
@@ -83,7 +79,7 @@ export function mountComments(
       left: `${(stage.clientWidth - width) / 2}px`,
       top: `${(stage.clientHeight - height) / 2}px`,
     });
-    renderer.setScale(width / STAGE_WIDTH);
+    renderer?.setScale(width / STAGE_WIDTH);
     reseek();
   });
   if (root.parentElement) resize.observe(root.parentElement);
@@ -96,7 +92,6 @@ export function mountComments(
     playing = isPlaying();
     reseek();
   });
-  video.addEventListener('ratechange', sync);
 
   const applyVisible = (v: boolean) => {
     visible = v;
@@ -113,6 +108,7 @@ export function mountComments(
 
   (async () => {
     applyVisible((await commentSettings.getValue()).visible);
+    if (!renderer) return;
     const threads = await fetchCommentThreads(await context);
     if (destroyed) return;
     const specs = threads.flatMap((t) => t.comments.map((c) => toSpec(c, t.fork))).filter((s): s is CommentSpec => !!s);
@@ -139,7 +135,7 @@ export function mountComments(
       destroyed = true;
       cancelAnimationFrame(raf);
       resize.disconnect();
-      renderer.clear();
+      renderer?.destroy();
     },
   };
 }
