@@ -1,5 +1,7 @@
-import { mountComments } from './comments';
 import type { WatchContext } from '@/lib/nico/session';
+import { layoutSettings } from '@/lib/settings';
+import { mountComments } from './comments';
+import { renderHeader, renderPanel } from './info';
 import { AUTO_LEVEL, createPlayer } from './player';
 
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -33,7 +35,20 @@ const formatTime = (s: number) => {
   return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 };
 
-export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg: string) => void): PlayerUi {
+export interface PlayerUiOptions {
+  log(msg: string): void;
+  /** 上段の右端に置くボタン */
+  actions: HTMLElement[];
+}
+
+export function mountPlayerUi(container: HTMLElement, videoId: string, { log, actions }: PlayerUiOptions): PlayerUi {
+  const header = el('header', 'info');
+  const headerBody = el('div', 'info-body', '読み込み中…');
+  const headerActions = el('div', 'actions');
+  headerActions.append(...actions);
+  header.append(headerBody, headerActions);
+  const panel = el('aside', 'panel');
+  const playerBox = el('div', 'player');
   const stage = el('div', 'stage');
   const video = el('video', '');
   const commentRoot = el('div', 'comments');
@@ -59,13 +74,17 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
   const quality = el('select', 'quality');
   quality.title = '画質';
   const commentToggle = el('button', 'comment-toggle', '💬');
+  const pin = el('button', 'pin', '📌');
   const fullscreen = el('button', 'fullscreen', '⛶');
   fullscreen.title = '全画面 (F)';
   const bar = el('div', 'bar');
-  bar.append(play, mute, volume, time, el('span', 'spacer'), commentToggle, rate, quality, fullscreen);
+  bar.append(play, mute, volume, time, el('span', 'spacer'), commentToggle, rate, quality, pin, fullscreen);
   controls.append(seek, bar);
-  stage.append(video, commentRoot, message, osd, controls);
-  container.append(stage);
+  stage.append(video, commentRoot, message, osd);
+  playerBox.append(stage, controls);
+  const layout = el('div', 'window');
+  layout.append(header, playerBox, panel);
+  container.append(layout);
 
   let seeking = false;
 
@@ -104,6 +123,19 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
     quality.value = String(player.selectedLevel);
   };
 
+  let pinned = true;
+  const renderPin = () => {
+    playerBox.classList.toggle('pinned', pinned);
+    pin.classList.toggle('off', !pinned);
+    pin.title = pinned ? 'コントロールを自動で隠す (H)' : 'コントロールを常に表示 (H)';
+  };
+  const togglePin = () => {
+    pinned = !pinned;
+    renderPin();
+    layoutSettings.setValue({ controlsPinned: pinned });
+    showOsd(pinned ? 'コントロールを常に表示' : 'コントロールを自動で隠す');
+  };
+
   const renderComments = () => {
     commentToggle.classList.toggle('off', !comments.visible);
     commentToggle.title = comments.visible ? 'コメントを隠す (C)' : 'コメントを表示 (C)';
@@ -117,10 +149,21 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
     },
   });
   const comments = mountComments(commentRoot, video, player.context, { log, onVisibilityChange: renderComments });
+  player.context.then(
+    (ctx) => {
+      renderHeader(headerBody, ctx.data);
+      renderPanel(panel, ctx.data.info);
+    },
+    () => (headerBody.textContent = ''),
+  );
+  layoutSettings.getValue().then((v) => {
+    pinned = v.controlsPinned;
+    renderPin();
+  });
 
   const togglePlay = () => (video.paused ? video.play().catch((e) => log(`play() rejected: ${e}`)) : video.pause());
   const toggleFullscreen = () =>
-    document.fullscreenElement ? document.exitFullscreen() : stage.requestFullscreen().catch((e) => log(`fullscreen: ${e}`));
+    document.fullscreenElement ? document.exitFullscreen() : playerBox.requestFullscreen().catch((e) => log(`fullscreen: ${e}`));
   let osdTimer: ReturnType<typeof setTimeout> | undefined;
   const showOsd = (text: string) => {
     osd.textContent = text;
@@ -154,6 +197,11 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
 
   let wheelDelta = 0;
   const onWheel = (e: WheelEvent) => {
+    // 右パネルのホイールはスクロールに使う。Ctrl+ホイールはページの拡大を止める
+    if (panel.contains(e.target as Node)) {
+      if (e.ctrlKey) e.preventDefault();
+      return;
+    }
     e.preventDefault();
     const d = e.deltaY || e.deltaX;
     if (!d) return;
@@ -170,9 +218,9 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
 
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
   const wake = () => {
-    stage.classList.remove('idle');
+    playerBox.classList.remove('idle');
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => !video.paused && stage.classList.add('idle'), IDLE_MS);
+    idleTimer = setTimeout(() => !video.paused && playerBox.classList.add('idle'), IDLE_MS);
   };
 
   video.addEventListener('click', togglePlay);
@@ -206,7 +254,8 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
   quality.addEventListener('change', () => player.setQuality(Number(quality.value)));
   commentToggle.addEventListener('click', toggleComments);
   fullscreen.addEventListener('click', toggleFullscreen);
-  stage.addEventListener('pointermove', wake);
+  pin.addEventListener('click', togglePin);
+  playerBox.addEventListener('pointermove', wake);
   container.addEventListener('wheel', onWheel, { passive: false });
 
   renderPlay();
@@ -214,6 +263,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
   renderRate();
   renderQuality();
   renderComments();
+  renderPin();
   renderTime();
 
   return {
@@ -251,6 +301,9 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
           break;
         case 'c':
           toggleComments();
+          break;
+        case 'h':
+          togglePin();
           break;
         case '<':
           stepRate(-1);

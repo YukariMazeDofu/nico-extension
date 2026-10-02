@@ -36,7 +36,7 @@ async def main(a):
     watch = f"https://www.nicovideo.jp/watch/{a.video_id}"
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px,
+            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP",
             args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
 
         page = await ctx.new_page()

@@ -15,9 +15,26 @@ export interface DomandVariant {
   height?: number;
 }
 
+export interface VideoSummary {
+  id: string;
+  title: string;
+}
+
+export interface VideoInfo {
+  /** HTML（サニタイズ前） */
+  description: string;
+  registeredAt: string;
+  count: { view: number; comment: number; mylist: number; like: number };
+  tags: { name: string; isLocked: boolean }[];
+  genre?: string;
+  owner?: { name: string; iconUrl: string; url: string };
+  series?: { title: string; url: string; prev?: VideoSummary; next?: VideoSummary };
+}
+
 export interface WatchData {
   videoId: string;
   title: string;
+  info: VideoInfo;
   watchTrackId: string;
   nicosid: string;
   viewer?: { id: number; isPremium: boolean };
@@ -42,6 +59,31 @@ export const watchUrl = (videoId: string) => `https://www.nicovideo.jp/watch/${v
 export const accessRightsHlsUrl = (w: WatchData) =>
   `https://nvapi.nicovideo.jp/v1/watch/${w.videoId}/access-rights/hls?actionTrackId=${w.watchTrackId}`;
 
+function videoInfoOf(r: any): VideoInfo {
+  const summary = (v: any): VideoSummary | undefined => (v ? { id: v.id, title: v.title } : undefined);
+  const owner = r.owner
+    ? { name: r.owner.nickname, iconUrl: r.owner.iconUrl, url: `https://www.nicovideo.jp/user/${r.owner.id}` }
+    : r.channel
+      ? { name: r.channel.name, iconUrl: r.channel.thumbnail?.smallUrl, url: `https://ch.nicovideo.jp/${r.channel.id}` }
+      : undefined;
+  return {
+    description: r.video.description,
+    registeredAt: r.video.registeredAt,
+    count: r.video.count,
+    tags: r.tag.items.map((t: any) => ({ name: t.name, isLocked: t.isLocked })),
+    genre: r.genre && !r.genre.isNotSet ? r.genre.label : undefined,
+    owner,
+    series: r.series
+      ? {
+          title: r.series.title,
+          url: `https://www.nicovideo.jp/series/${r.series.id}`,
+          prev: summary(r.series.video?.prev),
+          next: summary(r.series.video?.next),
+        }
+      : undefined,
+  };
+}
+
 export async function fetchWatchData(videoId: string): Promise<WatchData> {
   const res = await fetch(watchUrl(videoId), { credentials: 'include' });
   const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
@@ -53,6 +95,7 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
   return {
     videoId,
     title: r.video.title,
+    info: videoInfoOf(r),
     watchTrackId: r.client.watchTrackId,
     nicosid: r.client.nicosid,
     viewer: r.viewer ? { id: r.viewer.id, isPremium: r.viewer.isPremium } : undefined,

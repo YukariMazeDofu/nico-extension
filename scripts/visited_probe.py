@@ -38,7 +38,7 @@ async def main(a):
             px.update(username=u.username, password=u.password or "")
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px,
+            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP",
             args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
         page = await ctx.new_page()
         await page.goto(RANKING, wait_until="load")
