@@ -4,5 +4,6 @@ export default defineConfig({
   targetBrowsers: ['chrome'],
   manifest: {
     name: 'nico-extension',
+    permissions: ['storage'],
   },
 });

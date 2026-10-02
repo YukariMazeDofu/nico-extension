@@ -4,12 +4,131 @@
   display: grid;
   place-items: center;
   background: rgb(0 0 0 / 0.85);
+  font: 14px/1.4 system-ui, sans-serif;
+  color: #fff;
 }
 
-video {
+.stage {
+  position: relative;
   width: min(90vw, calc(90vh * 16 / 9));
   aspect-ratio: 16 / 9;
   background: #000;
+  overflow: hidden;
+}
+
+.stage:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+}
+
+.stage.idle {
+  cursor: none;
+}
+
+video {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  font-size: 18px;
+  text-shadow: 0 0 4px #000;
+}
+
+.controls {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 24px 12px 8px;
+  background: linear-gradient(transparent, rgb(0 0 0 / 0.75));
+  transition: opacity 0.3s;
+}
+
+.stage.idle .controls {
+  opacity: 0;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+button,
+select {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+button {
+  min-width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+
+select {
+  padding: 4px;
+  border-radius: 4px;
+}
+
+select:hover,
+button:hover {
+  background: rgb(255 255 255 / 0.15);
+}
+
+option {
+  color: #000;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+input[type='range'] {
+  appearance: none;
+  height: 4px;
+  margin: 0;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.seek {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  background: linear-gradient(
+    to right,
+    #fff var(--played, 0%),
+    rgb(255 255 255 / 0.5) var(--played, 0%) var(--buffered, 0%),
+    rgb(255 255 255 / 0.2) var(--buffered, 0%)
+  );
+}
+
+.volume {
+  width: 80px;
+  background: rgb(255 255 255 / 0.5);
 }
 
 .close {
@@ -17,8 +136,23 @@ video {
   top: 16px;
   right: 16px;
   font: 24px/1 sans-serif;
-  color: #fff;
-  background: none;
-  border: 0;
-  cursor: pointer;
+}
+
+.osd {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  translate: -50%;
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.6);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.osd.visible {
+  opacity: 1;
 }
