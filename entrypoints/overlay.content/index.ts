@@ -1,5 +1,6 @@
 import './style.css';
 import { officialWatchUrl, watchIdFromAnchor, watchIdFromDirectPath } from '@/lib/nico/link';
+import { watchUrl } from '@/lib/nico/watch';
 import { mountPlayerUi, type PlayerUi } from './controls';
 
 const LEAVE_FALLBACK_MS = 300;
@@ -10,6 +11,13 @@ function leave() {
   window.addEventListener('beforeunload', () => (leaving = true), { once: true });
   if (history.length > 1) history.back();
   setTimeout(() => leaving || location.replace('/'), history.length > 1 ? LEAVE_FALLBACK_MS : 0);
+}
+
+/** URL を一時的に書き換えて訪問済み（`:visited`）にする。履歴の項目は増やさない。 */
+function markVisited(urls: string[]) {
+  const current = location.href;
+  for (const url of new Set(urls)) history.replaceState(history.state, '', url);
+  history.replaceState(history.state, '', current);
 }
 
 export default defineContentScript({
@@ -24,8 +32,9 @@ export default defineContentScript({
 
     const log = (msg: string) => console.info(`[nico-ext] ${msg}`);
 
-    const open = async (videoId: string) => {
+    const open = async (videoId: string, href?: string) => {
       close?.();
+      markVisited([watchUrl(videoId), ...(href ? [href] : [])]);
       const ui = await createShadowRootUi<PlayerUi>(ctx, {
         name: 'nico-ext-overlay',
         position: 'modal',
@@ -85,7 +94,7 @@ export default defineContentScript({
         if (!videoId) return;
         e.preventDefault();
         e.stopPropagation();
-        open(videoId);
+        open(videoId, a.href);
       },
       { capture: true },
     );
