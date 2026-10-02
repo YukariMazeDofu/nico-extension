@@ -4,7 +4,7 @@
 # ///
 """拡張を読み込んだ headless Chromium で nicovideo.jp のリンククリック→オーバーレイ再生を確かめる。
 video_id を渡すとそのリンクを差し込んでクリックし、省略するとページ内の最初の動画リンクをクリックする。
-再生後にページ要素との重なり、コメントの描画と表示 ON/OFF、キーボードショートカット、ホイール操作、画質の切り替えを試し、--recover ではセグメントを一時的に 403 にして復帰を確かめる。
+再生後にページ要素との重なり、コメントの描画と表示 ON/OFF、上段・右パネルとコントロールの配置、キーボードショートカット、ホイール操作、画質の切り替えを試し、--recover ではセグメントを一時的に 403 にして復帰を確かめる。
 --shot には再生後の画面を保存する。
 usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ext_probe.py .output/chrome-mv3 <page_url> <seconds> [video_id] [--recover] [--shot out.png]"""
 import argparse
@@ -48,6 +48,33 @@ async def check_comments(page):
     await page.evaluate(f"() => {SHADOW}.querySelector('video').play()")
 
 
+LAYOUT = f"""() => {{ const r = {SHADOW}; const rect = (s) => r.querySelector(s).getBoundingClientRect();
+    const stage = rect('.stage'), controls = rect('.controls');
+    return {{title: r.querySelector('.title')?.textContent.slice(0, 30), tags: r.querySelectorAll('.tag').length,
+      panel: r.querySelector('.panel').children.length, pinned: r.querySelector('.player').classList.contains('pinned'),
+      controlsBelowVideo: controls.top >= stage.bottom - 1, controlsOpacity: getComputedStyle(r.querySelector('.controls')).opacity}}; }}"""
+
+
+async def check_layout(page):
+    """上段・右パネルの表示、コントロールの位置と H での切り替え、右パネル上のホイールを確かめる。"""
+    print("layout:", await page.evaluate(LAYOUT))
+    await page.keyboard.press("h")
+    await page.mouse.move(400, 300)
+    await page.wait_for_timeout(500)
+    print("layout after h:", await page.evaluate(LAYOUT))
+    await page.wait_for_timeout(3000)
+    print("layout after idle:", await page.evaluate(LAYOUT))
+    await page.keyboard.press("h")
+    await page.wait_for_timeout(300)
+    print("layout after h again:", await page.evaluate(LAYOUT))
+    box = await page.evaluate(f"() => {{ const b = {SHADOW}.querySelector('.panel').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }}")
+    vol = await page.evaluate(f"() => {SHADOW}.querySelector('video').volume")
+    await page.mouse.move(*box)
+    await page.mouse.wheel(0, 200)
+    await page.wait_for_timeout(300)
+    print("wheel on panel keeps volume:", vol == await page.evaluate(f"() => {SHADOW}.querySelector('video').volume"))
+
+
 async def main(a):
     u = urlparse(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or "")
     px = None
@@ -57,7 +84,7 @@ async def main(a):
             px.update(username=u.username, password=u.password or "")
     async with async_playwright() as p:
         ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px,
+            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP",
             args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
         page = ctx.pages[0] if ctx.pages else await ctx.new_page()
         fatal = asyncio.Event()
@@ -103,6 +130,7 @@ async def main(a):
         if a.shot:
             await page.screenshot(path=a.shot)
         await check_comments(page)
+        await check_layout(page)
         print("covered by others:", await page.evaluate("""() => { const host = document.querySelector('nico-ext-overlay'), other = new Set();
             for (let x = 5; x < innerWidth; x += 40) for (let y = 5; y < innerHeight; y += 40) {
               const e = document.elementFromPoint(x, y); if (e !== host) other.add(e.tagName + '.' + String(e.className).slice(0, 40)); }

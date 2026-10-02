@@ -13,6 +13,8 @@ function leave() {
   setTimeout(() => leaving || location.replace('/'), history.length > 1 ? LEAVE_FALLBACK_MS : 0);
 }
 
+const isPlainClick = (e: MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+
 /** URL を一時的に書き換えて訪問済み（`:visited`）にする。履歴の項目は増やさない。 */
 function markVisited(urls: string[]) {
   const current = location.href;
@@ -58,8 +60,17 @@ export default defineContentScript({
             else location.assign(officialWatchUrl(videoId));
           });
           container.append(backdrop);
-          playerUi = mountPlayerUi(backdrop, videoId, log);
-          backdrop.append(official, button);
+          // オーバーレイ内の動画リンクは、オーバーレイでその動画に切り替える
+          backdrop.addEventListener('click', (e) => {
+            if (!isPlainClick(e)) return;
+            const a = (e.target as Element | null)?.closest('a');
+            const id = a && watchIdFromAnchor(a);
+            if (!id) return;
+            e.preventDefault();
+            if (directId) location.assign(watchUrl(id));
+            else open(id, a.href);
+          });
+          playerUi = mountPlayerUi(backdrop, videoId, { log, actions: [official, button] });
           return playerUi;
         },
         onRemove(mounted) {
@@ -88,7 +99,7 @@ export default defineContentScript({
       document,
       'click',
       (e) => {
-        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        if (!isPlainClick(e)) return;
         const a = (e.target as Element | null)?.closest('a');
         const videoId = a && watchIdFromAnchor(a);
         if (!videoId) return;

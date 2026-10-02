@@ -17,3 +17,12 @@ export interface CommentSettings {
 export const commentSettings = storage.defineItem<CommentSettings>('local:comments', {
   fallback: { visible: true },
 });
+
+export interface LayoutSettings {
+  /** true なら動画の下にコントロールを常に表示し、false なら動画に重ねて操作がないと隠す */
+  controlsPinned: boolean;
+}
+
+export const layoutSettings = storage.defineItem<LayoutSettings>('local:layout', {
+  fallback: { controlsPinned: true },
+});
