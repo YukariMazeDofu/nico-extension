@@ -156,3 +156,31 @@ input[type='range']::-webkit-slider-thumb {
 .osd.visible {
   opacity: 1;
 }
+
+.comments {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.comments[hidden] {
+  display: none;
+}
+
+.comment-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.comment {
+  position: absolute;
+  left: 0;
+  white-space: pre;
+  paint-order: stroke fill;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.comment-toggle.off {
+  opacity: 0.4;
+}

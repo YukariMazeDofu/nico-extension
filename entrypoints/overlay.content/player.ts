@@ -28,6 +28,7 @@ export interface Player {
   readonly qualities: Quality[];
   readonly selectedLevel: number;
   readonly playingQuality: Quality | undefined;
+  readonly context: Promise<WatchContext>;
   setQuality(level: number): void;
   destroy(): void;
 }
@@ -51,6 +52,7 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
   let qualities: Quality[] = [];
   let selectedLevel = AUTO_LEVEL;
   let settings: PlayerSettings | undefined;
+  const context = WatchContext.load(videoId);
 
   const save = (patch: Partial<PlayerSettings>) => {
     if (!settings) return;
@@ -134,7 +136,7 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     video.volume = settings.volume;
     video.muted = settings.muted;
     video.defaultPlaybackRate = video.playbackRate = settings.playbackRate;
-    ctx = await WatchContext.load(videoId);
+    ctx = await context;
     if (destroyed) return;
     log(`watch data: ${ctx.data.videos.length} videos, ${ctx.data.audios.length} audios`);
     tracker = new WatchEventTracker(ctx, log);
@@ -159,6 +161,7 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     get playingQuality() {
       return hls ? qualities.find((q) => q.level === hls?.currentLevel) : undefined;
     },
+    context,
     setQuality(level) {
       const q = qualities.find((x) => x.level === level);
       save({ quality: q ? q.height : 'auto' });

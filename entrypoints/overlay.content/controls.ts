@@ -1,3 +1,4 @@
+import { mountComments } from './comments';
 import { AUTO_LEVEL, createPlayer } from './player';
 
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -33,6 +34,7 @@ const formatTime = (s: number) => {
 export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg: string) => void): PlayerUi {
   const stage = el('div', 'stage');
   const video = el('video', '');
+  const commentRoot = el('div', 'comments');
   const message = el('div', 'message');
   const osd = el('div', 'osd');
   const controls = el('div', 'controls');
@@ -54,12 +56,13 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
   for (const r of RATES) rate.append(new Option(`${r}x`, String(r)));
   const quality = el('select', 'quality');
   quality.title = '画質';
+  const commentToggle = el('button', 'comment-toggle', '💬');
   const fullscreen = el('button', 'fullscreen', '⛶');
   fullscreen.title = '全画面 (F)';
   const bar = el('div', 'bar');
-  bar.append(play, mute, volume, time, el('span', 'spacer'), rate, quality, fullscreen);
+  bar.append(play, mute, volume, time, el('span', 'spacer'), commentToggle, rate, quality, fullscreen);
   controls.append(seek, bar);
-  stage.append(video, message, osd, controls);
+  stage.append(video, commentRoot, message, osd, controls);
   container.append(stage);
 
   let seeking = false;
@@ -99,6 +102,11 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
     quality.value = String(player.selectedLevel);
   };
 
+  const renderComments = () => {
+    commentToggle.classList.toggle('off', !comments.visible);
+    commentToggle.title = comments.visible ? 'コメントを隠す (C)' : 'コメントを表示 (C)';
+  };
+
   const player = createPlayer(video, videoId, {
     log,
     onQualityChange: renderQuality,
@@ -106,6 +114,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
       message.textContent = msg;
     },
   });
+  const comments = mountComments(commentRoot, video, player.context, { log, onVisibilityChange: renderComments });
 
   const togglePlay = () => (video.paused ? video.play().catch((e) => log(`play() rejected: ${e}`)) : video.pause());
   const toggleFullscreen = () =>
@@ -135,6 +144,10 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
     const next = dir > 0 ? RATES.find((x) => x > r) : RATES.findLast((x) => x < r);
     if (next) video.playbackRate = next;
     showOsd(`速度 ${video.playbackRate}x`);
+  };
+  const toggleComments = () => {
+    comments.setVisible(!comments.visible);
+    showOsd(comments.visible ? 'コメント表示' : 'コメント非表示');
   };
 
   let wheelDelta = 0;
@@ -189,6 +202,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
   volume.addEventListener('input', () => setVolume(Number(volume.value)));
   rate.addEventListener('change', () => (video.playbackRate = Number(rate.value)));
   quality.addEventListener('change', () => player.setQuality(Number(quality.value)));
+  commentToggle.addEventListener('click', toggleComments);
   fullscreen.addEventListener('click', toggleFullscreen);
   stage.addEventListener('pointermove', wake);
   container.addEventListener('wheel', onWheel, { passive: false });
@@ -197,6 +211,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
   renderVolume();
   renderRate();
   renderQuality();
+  renderComments();
   renderTime();
 
   return {
@@ -232,6 +247,9 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
         case 'f':
           toggleFullscreen();
           break;
+        case 'c':
+          toggleComments();
+          break;
         case '<':
           stepRate(-1);
           break;
@@ -255,6 +273,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, log: (msg
       clearTimeout(idleTimer);
       clearTimeout(osdTimer);
       if (document.fullscreenElement) document.exitFullscreen();
+      comments.destroy();
       player.destroy();
     },
   };
