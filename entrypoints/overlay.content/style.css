@@ -1,0 +1,24 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.85);
+}
+
+video {
+  width: min(90vw, calc(90vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  font: 24px/1 sans-serif;
+  color: #fff;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}

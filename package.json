@@ -1,0 +1,19 @@
+{
+  "name": "nico-extension",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "compile": "tsc --noEmit",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "hls.js": "1.7.3"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "wxt": "0.21.4"
+  }
+}
