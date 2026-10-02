@@ -9,3 +9,11 @@ export interface PlayerSettings {
 export const playerSettings = storage.defineItem<PlayerSettings>('local:player', {
   fallback: { volume: 1, muted: false, playbackRate: 1, quality: 'auto' },
 });
+
+export interface CommentSettings {
+  visible: boolean;
+}
+
+export const commentSettings = storage.defineItem<CommentSettings>('local:comments', {
+  fallback: { visible: true },
+});
