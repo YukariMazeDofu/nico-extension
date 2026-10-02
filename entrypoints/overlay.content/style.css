@@ -138,6 +138,15 @@ input[type='range']::-webkit-slider-thumb {
   font: 24px/1 sans-serif;
 }
 
+.official {
+  position: fixed;
+  top: 16px;
+  right: 56px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
 .osd {
   position: absolute;
   top: 16px;
