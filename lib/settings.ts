@@ -1,3 +1,5 @@
+import type { RendererKind } from './comment/renderers';
+
 export interface PlayerSettings {
   volume: number;
   muted: boolean;
@@ -12,8 +14,9 @@ export const playerSettings = storage.defineItem<PlayerSettings>('local:player',
 
 export interface CommentSettings {
   visible: boolean;
+  renderer?: RendererKind;
 }
 
 export const commentSettings = storage.defineItem<CommentSettings>('local:comments', {
-  fallback: { visible: true },
+  fallback: { visible: true, renderer: 'css' },
 });

@@ -1,9 +1,7 @@
 import { cssFont, type PlacedComment, xAt } from './layout';
+import { commentOpacity, STROKE_OPACITY, STROKE_WIDTH, strokeRgb } from './raster';
 import type { CommentRenderer } from './timeline';
 
-const STROKE_WIDTH = 2.8;
-const STROKE_OPACITY = 0.4;
-const LIVE_OPACITY = 0.5;
 const DRIFT_TOLERANCE_MS = 50;
 
 /** コメント 1 件を 1 要素にし、transform と opacity の Web Animation で動かす（合成スレッドで進む）。 */
@@ -33,16 +31,15 @@ export class CssCommentRenderer implements CommentRenderer {
     const el = document.createElement('div');
     el.className = 'comment';
     el.textContent = c.spec.body;
-    const stroke = c.spec.color.toUpperCase() === '#000000' ? '255 255 255' : '0 0 0';
     Object.assign(el.style, {
       top: `${c.y * k}px`,
       font: cssFont(c.spec, c.fontSize * k),
       lineHeight: `${c.lineHeight * k}px`,
       color: c.spec.color,
-      webkitTextStroke: `${STROKE_WIDTH * 2 * k}px rgb(${stroke} / ${STROKE_OPACITY})`,
+      webkitTextStroke: `${STROKE_WIDTH * 2 * k}px rgb(${strokeRgb(c)} / ${STROKE_OPACITY})`,
     });
     this.layers[c.layer].append(el);
-    const opacity = c.spec.live ? LIVE_OPACITY : 1;
+    const opacity = commentOpacity(c);
     const anim = el.animate(
       [
         { transform: `translateX(${c.x0 * k}px)`, opacity },
@@ -68,8 +65,15 @@ export class CssCommentRenderer implements CommentRenderer {
     for (const [c, anim] of this.items) this.align(c, anim, nowMs, false);
   }
 
+  frame() {}
+
   clear() {
     for (const c of [...this.items.keys()]) this.hide(c);
+  }
+
+  destroy() {
+    this.clear();
+    for (const l of this.layers) l.remove();
   }
 
   private align(c: PlacedComment, anim: Animation, nowMs: number, force: boolean) {

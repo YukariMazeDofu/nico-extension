@@ -8,7 +8,11 @@ export interface CommentRenderer {
   hide(c: PlacedComment): void;
   /** 表示中のコメントを動画の時刻と再生状態に合わせる */
   sync(nowMs: number, rate: number, playing: boolean): void;
+  /** 毎フレーム、動画の時刻で描き直す */
+  frame(nowMs: number): void;
   clear(): void;
+  /** 描画先の要素と資源を捨てる */
+  destroy(): void;
 }
 
 const LOOKAHEAD_MS = 500;
@@ -17,6 +21,10 @@ const LOOKAHEAD_MS = 500;
 export class CommentTimeline {
   private next = 0;
   private readonly shown = new Set<PlacedComment>();
+
+  get size() {
+    return this.shown.size;
+  }
 
   /** `comments` は `startMs` の昇順 */
   constructor(
@@ -34,6 +42,7 @@ export class CommentTimeline {
         this.shown.delete(c);
       }
     }
+    this.renderer.frame(nowMs);
   }
 
   /** 表示中のコメントを捨てて、`nowMs` の時点から並べ直す。 */
