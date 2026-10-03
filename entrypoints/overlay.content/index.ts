@@ -1,6 +1,6 @@
 import './style.css';
-import { officialWatchUrl, watchIdFromAnchor, watchIdFromDirectPath } from '@/lib/nico/link';
-import { watchUrl } from '@/lib/nico/watch';
+import { watchIdFromAnchor, watchIdFromDirectPath } from '@/lib/nico/link';
+import { officialWatchUrl, watchPath, watchUrl } from '@/lib/nico/urls';
 import { mountPlayerUi, type PlayerUi } from './controls';
 import { icon } from './icons';
 import { mountThemeSwitch } from './theme';
@@ -97,7 +97,7 @@ export default defineContentScript({
     };
 
     if (directId) {
-      history.replaceState(history.state, '', `/watch/${directId}${location.search}${location.hash}`);
+      history.replaceState(history.state, '', `${watchPath(directId)}${location.search}${location.hash}`);
       open(directId);
     }
 

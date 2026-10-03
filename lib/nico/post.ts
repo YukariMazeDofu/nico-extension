@@ -1,6 +1,7 @@
+import { NicoApiError } from './api';
 import { sendToThread } from './comment';
-import { commentKey, dropCommentKey } from './keys';
-import { NicoApiError, type CommentThreadInfo, type WatchData } from './watch';
+import { dropCommentKey, withCommentKey } from './keys';
+import type { CommentThreadInfo, WatchData } from './watch';
 
 /** 投稿できない理由 */
 export type PostBlock = 'notLoggedIn' | 'noThread' | 'banned' | 'restricted';
@@ -47,7 +48,7 @@ export function postBlockOf(w: WatchData): PostBlock | undefined {
   return undefined;
 }
 
-/** 通常のスレッドに投稿する。鍵の期限切れ（`EXPIRED_TOKEN`）では鍵を取り直して 1 回だけ再送する。 */
+/** 通常のスレッドに投稿する。`184` のないコマンドには `184` を足す（`isThreadkeyRequired` のスレッドを除く）。 */
 export async function postComment(w: WatchData, draft: CommentDraft): Promise<PostedComment> {
   const thread = postThreadOf(w);
   if (!thread) throw new NicoApiError('no post target thread', 0);
@@ -58,23 +59,16 @@ export async function postComment(w: WatchData, draft: CommentDraft): Promise<Po
     commands = [...commands, '184'];
   }
   const query = { threadId: thread.id };
-  for (let retried = false; ; retried = true) {
-    const key = await commentKey<PostKey>('post', query);
+  return withCommentKey('post', query, async (key: PostKey) => {
     if (key.challenge?.isRequired) throw new ChallengeRequiredError();
-    const res = await sendToThread(w, 'POST', `${thread.id}/comments`, {
+    const posted = await sendToThread<PostedComment>(w, 'comment post', 'POST', `${thread.id}/comments`, {
       videoId: w.videoId,
       commands,
       body: draft.body,
       vposMs: draft.vposMs,
       postKey: key.postKey,
     });
-    const json = await res.json();
-    if (res.ok) {
-      if (json.data.shouldRefreshKey) dropCommentKey('post', query);
-      return json.data;
-    }
-    dropCommentKey('post', query);
-    const code = json.meta?.errorCode;
-    if (retried || code !== 'EXPIRED_TOKEN') throw new NicoApiError('comment post failed', res.status, code);
-  }
+    if (posted.shouldRefreshKey) dropCommentKey('post', query);
+    return posted;
+  });
 }

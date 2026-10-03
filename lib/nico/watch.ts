@@ -1,11 +1,6 @@
-export const FRONTEND_ID = '6';
-
-export const NVAPI = 'https://nvapi.nicovideo.jp';
-
-export const FRONTEND_HEADERS = {
-  'X-Frontend-Id': FRONTEND_ID,
-  'X-Frontend-Version': '0',
-};
+import { FRONTEND_HEADERS, NicoApiError, nicoFetch } from './api';
+import type { CommentFork } from './comment';
+import { accessRightsHlsUrl, channelUrl, seriesUrl, userUrl, watchUrl } from './urls';
 
 export interface DomandVariant {
   id: string;
@@ -35,7 +30,7 @@ export interface VideoInfo {
 
 export interface CommentThreadInfo {
   id: string;
-  fork: 'owner' | 'main' | 'easy';
+  fork: CommentFork;
   isDefaultPostTarget: boolean;
   isEasyCommentPostTarget: boolean;
   /** チャンネル・コミュニティの動画のスレッド。`184` を付けると投稿できない */
@@ -60,39 +55,74 @@ export interface WatchData {
   ngScoreDisabled: boolean;
 }
 
-export class NicoApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly code?: string,
-  ) {
-    super(message);
+/** `server-response` の `data.response` のうち使う値 */
+interface ServerResponse {
+  video: { title: string; description: string; registeredAt: string; count: VideoInfo['count'] };
+  tag: { items: { name: string; isLocked: boolean }[] };
+  genre?: { label: string; isNotSet: boolean } | null;
+  owner?: { id: number; nickname: string; iconUrl: string } | null;
+  channel?: { id: string; name: string; thumbnail?: { smallUrl: string } | null } | null;
+  series?: { id: number; title: string; video?: { prev?: VideoSummary | null; next?: VideoSummary | null } | null } | null;
+  client: { watchTrackId: string; nicosid: string };
+  viewer?: { id: number; isPremium: boolean } | null;
+  media: { domand: { accessRightKey: string; videos: DomandVariant[]; audios: DomandVariant[] } };
+  comment: {
+    nvComment: { server: string; threadKey: string; params: unknown };
+    threads: {
+      id: number | string;
+      forkLabel: CommentFork;
+      isDefaultPostTarget: boolean;
+      isEasyCommentPostTarget: boolean;
+      isThreadkeyRequired: boolean;
+      postkeyStatus: number;
+    }[];
+    ng?: { ngScore?: { isDisabled?: boolean } | null } | null;
+  };
+}
+
+/** `ServerResponse` の必須の値のパスと型 */
+const REQUIRED_PATHS: [string, 'string' | 'number' | 'object' | 'array'][] = [
+  ['video.title', 'string'],
+  ['video.description', 'string'],
+  ['video.registeredAt', 'string'],
+  ['video.count', 'object'],
+  ['tag.items', 'array'],
+  ['client.watchTrackId', 'string'],
+  ['client.nicosid', 'string'],
+  ['media.domand.accessRightKey', 'string'],
+  ['media.domand.videos', 'array'],
+  ['media.domand.audios', 'array'],
+  ['comment.nvComment.server', 'string'],
+  ['comment.nvComment.threadKey', 'string'],
+  ['comment.threads', 'array'],
+];
+
+function assertServerResponse(r: unknown, status: number): asserts r is ServerResponse {
+  for (const [path, type] of REQUIRED_PATHS) {
+    const v = path.split('.').reduce<any>((o, k) => o?.[k], r);
+    const ok = type === 'array' ? Array.isArray(v) : typeof v === type && v !== null;
+    if (!ok) throw new NicoApiError(`server-response: data.response.${path} is not ${type}`, status);
   }
 }
 
-export const watchUrl = (videoId: string) => `https://www.nicovideo.jp/watch/${videoId}`;
-
-export const accessRightsHlsUrl = (w: WatchData) =>
-  `${NVAPI}/v1/watch/${w.videoId}/access-rights/hls?actionTrackId=${w.watchTrackId}`;
-
-function videoInfoOf(r: any): VideoInfo {
-  const summary = (v: any): VideoSummary | undefined => (v ? { id: v.id, title: v.title } : undefined);
+function videoInfoOf(r: ServerResponse): VideoInfo {
+  const summary = (v?: VideoSummary | null): VideoSummary | undefined => (v ? { id: v.id, title: v.title } : undefined);
   const owner = r.owner
-    ? { kind: 'user' as const, name: r.owner.nickname, iconUrl: r.owner.iconUrl, url: `https://www.nicovideo.jp/user/${r.owner.id}` }
+    ? { kind: 'user' as const, name: r.owner.nickname, iconUrl: r.owner.iconUrl, url: userUrl(r.owner.id) }
     : r.channel
-      ? { kind: 'channel' as const, name: r.channel.name, iconUrl: r.channel.thumbnail?.smallUrl, url: `https://ch.nicovideo.jp/${r.channel.id}` }
+      ? { kind: 'channel' as const, name: r.channel.name, iconUrl: r.channel.thumbnail?.smallUrl ?? '', url: channelUrl(r.channel.id) }
       : undefined;
   return {
     description: r.video.description,
     registeredAt: r.video.registeredAt,
     count: r.video.count,
-    tags: r.tag.items.map((t: any) => ({ name: t.name, isLocked: t.isLocked })),
+    tags: r.tag.items.map((t) => ({ name: t.name, isLocked: t.isLocked })),
     genre: r.genre && !r.genre.isNotSet ? r.genre.label : undefined,
     owner,
     series: r.series
       ? {
           title: r.series.title,
-          url: `https://www.nicovideo.jp/series/${r.series.id}`,
+          url: seriesUrl(r.series.id),
           prev: summary(r.series.video?.prev),
           next: summary(r.series.video?.next),
         }
@@ -108,6 +138,7 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
   const json = JSON.parse(content);
   const r = json.data?.response;
   if (!res.ok || !r?.media?.domand) throw new NicoApiError('watch data unavailable', res.status, json.meta?.code);
+  assertServerResponse(r, res.status);
   return {
     videoId,
     title: r.video.title,
@@ -119,7 +150,7 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
     videos: r.media.domand.videos,
     audios: r.media.domand.audios,
     nvComment: r.comment.nvComment,
-    commentThreads: r.comment.threads.map((t: any) => ({
+    commentThreads: r.comment.threads.map((t) => ({
       id: String(t.id),
       fork: t.forkLabel,
       isDefaultPostTarget: t.isDefaultPostTarget,
@@ -135,7 +166,7 @@ export async function fetchHlsContentUrl(w: WatchData): Promise<string> {
   const audio = w.audios.filter((a) => a.isAvailable).sort((a, b) => b.bitRate - a.bitRate)[0];
   if (!audio) throw new NicoApiError('no available audio', 0);
   const outputs = w.videos.filter((v) => v.isAvailable).map((v) => [v.id, audio.id]);
-  const res = await fetch(accessRightsHlsUrl(w), {
+  const data = await nicoFetch<{ contentUrl: string }>('access-rights/hls', accessRightsHlsUrl(w.videoId, w.watchTrackId), {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -146,7 +177,5 @@ export async function fetchHlsContentUrl(w: WatchData): Promise<string> {
     },
     body: JSON.stringify({ outputs }),
   });
-  const json = await res.json();
-  if (!res.ok) throw new NicoApiError('access-rights/hls failed', res.status, json.meta?.errorCode);
-  return json.data.contentUrl;
+  return data.contentUrl;
 }

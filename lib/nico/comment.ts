@@ -1,5 +1,6 @@
+import { FRONTEND_HEADERS, NicoApiError, nicoFetch } from './api';
 import type { WatchContext } from './session';
-import { FRONTEND_HEADERS, NicoApiError, type WatchData } from './watch';
+import type { WatchData } from './watch';
 
 export type CommentFork = 'owner' | 'main' | 'easy';
 
@@ -35,7 +36,7 @@ export interface NvThreadsResult {
 
 async function postThreads(w: WatchData): Promise<NvThreadsResult> {
   const { server, threadKey, params } = w.nvComment;
-  const res = await fetch(`${server}/v1/threads`, {
+  const data = await nicoFetch<{ threads: NvThread[]; voltageZone?: { heatmap?: unknown } }>('nvcomment threads', `${server}/v1/threads`, {
     method: 'POST',
     headers: {
       ...FRONTEND_HEADERS,
@@ -44,15 +45,13 @@ async function postThreads(w: WatchData): Promise<NvThreadsResult> {
     },
     body: JSON.stringify({ params, threadKey, additionals: {} }),
   });
-  const json = await res.json();
-  if (!res.ok) throw new NicoApiError('nvcomment threads failed', res.status, json.meta?.errorCode);
-  const heatmap = json.data.voltageZone?.heatmap;
-  return { threads: json.data.threads, heatmap: Array.isArray(heatmap) && heatmap.length ? heatmap : null };
+  const heatmap = data.voltageZone?.heatmap;
+  return { threads: data.threads, heatmap: Array.isArray(heatmap) && heatmap.length ? heatmap : null };
 }
 
 /** nvcomment のスレッドへの書き込み。Cookie は送らず、ボディは JSON の文字列（`Content-Type` なし）。 */
-export function sendToThread(w: WatchData, method: string, path: string, body: unknown): Promise<Response> {
-  return fetch(`${w.nvComment.server}/v1/threads/${path}?pc=1`, {
+export function sendToThread<T>(w: WatchData, what: string, method: string, path: string, body: unknown): Promise<T> {
+  return nicoFetch(what, `${w.nvComment.server}/v1/threads/${path}?pc=1`, {
     method,
     headers: { ...FRONTEND_HEADERS, 'X-Client-Os-Type': 'others' },
     credentials: 'omit',
