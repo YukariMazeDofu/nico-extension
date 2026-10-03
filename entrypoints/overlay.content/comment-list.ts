@@ -1,7 +1,7 @@
 import type { CommentFork, NvComment, NvThread } from '@/lib/nico/comment';
 import { cancelNicoru, type NicoruBlock, nicoru, nicoruBlockOf } from '@/lib/nico/nicoru';
 import type { WatchContext } from '@/lib/nico/session';
-import { NicoApiError } from '@/lib/nico/watch';
+import { NicoApiError } from '@/lib/nico/api';
 import { commentListSettings } from '@/lib/settings';
 import { icon } from './icons';
 

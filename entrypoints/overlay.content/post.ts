@@ -1,6 +1,6 @@
 import { ChallengeRequiredError, Invalid184Error, type PostBlock, postBlockOf, postComment } from '@/lib/nico/post';
 import type { WatchContext } from '@/lib/nico/session';
-import { NicoApiError } from '@/lib/nico/watch';
+import { NicoApiError } from '@/lib/nico/api';
 
 const BLOCK_TEXT: Record<PostBlock, string> = {
   notLoggedIn: 'ログインするとコメントできます',

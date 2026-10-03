@@ -1,5 +1,7 @@
+import { FRONTEND_HEADERS, FRONTEND_ID, nicoFetch } from './api';
 import type { WatchContext } from './session';
-import { accessRightsHlsUrl, FRONTEND_HEADERS, FRONTEND_ID, NicoApiError, type WatchData, watchUrl } from './watch';
+import { accessRightsHlsUrl, watchUrl } from './urls';
+import type { WatchData } from './watch';
 
 export type WatchEventType = 'start' | 'play' | 'impression' | 'end';
 
@@ -40,22 +42,25 @@ export async function sendWatchEvent(
   const accepted = btoa(`${FRONTEND_ID}:${w.videoId}:${w.watchTrackId}`);
   for (let retry = 0; ; retry++) {
     try {
-      const res = await fetch(`${accessRightsHlsUrl(w)}&__retry=${retry}`, {
-        method: 'POST',
-        credentials: 'include',
-        keepalive,
-        headers: {
-          ...FRONTEND_HEADERS,
-          'Content-Type': 'application/json',
-          'X-Request-With': watchUrl(w.videoId),
-          ...(accessRightKey ? { 'X-Access-Right-Key': accessRightKey } : {}),
+      const data = await nicoFetch<{ contentUrl?: string }>(
+        `watch event ${e.eventType}`,
+        `${accessRightsHlsUrl(w.videoId, w.watchTrackId)}&__retry=${retry}`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          keepalive,
+          headers: {
+            ...FRONTEND_HEADERS,
+            'Content-Type': 'application/json',
+            'X-Request-With': watchUrl(w.videoId),
+            ...(accessRightKey ? { 'X-Access-Right-Key': accessRightKey } : {}),
+          },
+          body,
         },
-        body,
-      });
-      const json = await res.json();
-      const q = new URLSearchParams(json.data?.contentUrl ?? '');
-      if (res.ok && q.get('accepted') === 'true' && q.get('data') === accepted) return;
-      throw new NicoApiError(`watch event ${e.eventType} rejected`, res.status, json.meta?.errorCode);
+      );
+      const q = new URLSearchParams(data?.contentUrl ?? '');
+      if (q.get('accepted') === 'true' && q.get('data') === accepted) return;
+      throw new Error(`watch event ${e.eventType} rejected`);
     } catch (err) {
       if (retry >= retries) throw err;
       await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));

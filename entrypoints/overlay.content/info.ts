@@ -1,4 +1,5 @@
 import type { VideoInfo, VideoSummary, WatchData } from '@/lib/nico/watch';
+import { ORIGIN, tagUrl, watchUrl } from '@/lib/nico/urls';
 import { type IconName, icon } from './icons';
 
 const ALLOWED_TAGS = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'FONT', 'I', 'P', 'S', 'SPAN', 'STRONG', 'U']);
@@ -21,7 +22,7 @@ function link(href: string, text: string, className = ''): HTMLAnchorElement {
 }
 
 function watchLink(v: VideoSummary, label: string) {
-  const a = link(`https://www.nicovideo.jp/watch/${v.id}`, '', 'series-video');
+  const a = link(watchUrl(v.id), '', 'series-video');
   a.title = v.title;
   a.append(el('small', '', label), el('span', '', v.title));
   return a;
@@ -41,7 +42,7 @@ export function sanitizeDescription(html: string): DocumentFragment {
         }
         let e: HTMLElement;
         if (n.tagName === 'A') {
-          const href = URL.parse(n.getAttribute('href') ?? '', 'https://www.nicovideo.jp/');
+          const href = URL.parse(n.getAttribute('href') ?? '', ORIGIN);
           if (!href || !/^https?:$/.test(href.protocol)) {
             copy(n, to);
             continue;
@@ -87,7 +88,7 @@ export function renderHeader(root: HTMLElement, w: WatchData) {
   );
   const tags = el('div', 'tags');
   for (const t of info.tags) {
-    const a = link(`https://www.nicovideo.jp/tag/${encodeURIComponent(t.name)}`, t.name, t.isLocked ? 'tag locked' : 'tag');
+    const a = link(tagUrl(t.name), t.name, t.isLocked ? 'tag locked' : 'tag');
     if (t.isLocked) {
       a.title = 'ロックされたタグ';
       a.prepend(icon('lock'));
