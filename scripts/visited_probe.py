@@ -9,12 +9,9 @@ usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/visited_probe.py .output/ch
 import argparse
 import asyncio
 import io
-import os
-import tempfile
-from urllib.parse import urlparse
 
 from PIL import Image
-from playwright.async_api import async_playwright
+from probe_common import launch
 
 RANKING = "https://www.nicovideo.jp/ranking"
 TITLE_LINK = "a[href^='/watch/'][class*='visited']"
@@ -30,16 +27,7 @@ async def visited_pixels(locator):
 
 
 async def main(a):
-    u = urlparse(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or "")
-    px = None
-    if u.hostname:
-        px = {"server": f"{u.scheme}://{u.hostname}:{u.port}"}
-        if u.username:
-            px.update(username=u.username, password=u.password or "")
-    async with async_playwright() as p:
-        ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP",
-            args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
+    async with launch(a.ext) as ctx:
         page = await ctx.new_page()
         await page.goto(RANKING, wait_until="load")
         await page.wait_for_timeout(3000)
@@ -71,7 +59,6 @@ async def main(a):
         print("== 開いていない動画")
         link = links.nth(2)
         print(await link.get_attribute("href"), "text color:", await visited_pixels(link))
-        await ctx.close()
 
 
 if __name__ == "__main__":

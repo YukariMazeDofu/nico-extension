@@ -9,13 +9,9 @@ Enter で入力欄に移ること、投稿欄を足したあとのコントロ�
 usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/post_probe.py .output/chrome-mv3 <video_id>"""
 import argparse
 import asyncio
-import os
-import tempfile
-from urllib.parse import urlparse
 
-from playwright.async_api import async_playwright
+from probe_common import SHADOW, launch
 
-SHADOW = "document.querySelector('nico-ext-overlay')?.shadowRoot"
 STATE = f"""() => {{ const r = {SHADOW}; const v = r.querySelector('video'); const b = r.querySelector('.post-body');
     const stage = r.querySelector('.stage').getBoundingClientRect(), controls = r.querySelector('.controls').getBoundingClientRect();
     return {{overlay: !!r.querySelector('.backdrop'), paused: v.paused, t: +v.currentTime.toFixed(1),
@@ -25,17 +21,7 @@ STATE = f"""() => {{ const r = {SHADOW}; const v = r.querySelector('video'); con
 
 
 async def main(a):
-    u = urlparse(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or "")
-    px = None
-    if u.hostname:
-        px = {"server": f"{u.scheme}://{u.hostname}:{u.port}"}
-        if u.username:
-            px.update(username=u.username, password=u.password or "")
-    async with async_playwright() as p:
-        ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP",
-            viewport={"width": 1280, "height": 720},
-            args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
+    async with launch(a.ext, viewport={"width": 1280, "height": 720}) as ctx:
         page = await ctx.new_page()
         page.on("pageerror", lambda e: print("pageerror", e))
         page.on("console", lambda m: "[nico-ext] comment" in m.text and print("console", m.text))
@@ -72,7 +58,6 @@ async def main(a):
             await page.keyboard.press("h")
             await page.wait_for_timeout(500)
             await page.screenshot(path=a.shot)
-        await ctx.close()
 
 
 if __name__ == "__main__":
