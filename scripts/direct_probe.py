@@ -8,14 +8,10 @@
 usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/direct_probe.py .output/chrome-mv3 <video_id>"""
 import argparse
 import asyncio
-import os
-import tempfile
-from urllib.parse import urlparse
 
-from playwright.async_api import async_playwright
+from probe_common import SHADOW, launch
 
 TOP = "https://www.nicovideo.jp/"
-SHADOW = "document.querySelector('nico-ext-overlay')?.shadowRoot"
 STATE = f"""() => {{ const v = {SHADOW}?.querySelector('video');
     return {{url: location.href, title: document.title, overlay: !!v, t: v ? +v.currentTime.toFixed(1) : null,
       officialVideo: !!document.querySelector('video')}}; }}"""
@@ -27,17 +23,8 @@ async def state(page, wait=4000):
 
 
 async def main(a):
-    u = urlparse(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or "")
-    px = None
-    if u.hostname:
-        px = {"server": f"{u.scheme}://{u.hostname}:{u.port}"}
-        if u.username:
-            px.update(username=u.username, password=u.password or "")
     watch = f"https://www.nicovideo.jp/watch/{a.video_id}"
-    async with async_playwright() as p:
-        ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP",
-            args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
+    async with launch(a.ext) as ctx:
 
         page = await ctx.new_page()
         page.on("pageerror", lambda e: print("pageerror", e))
@@ -91,7 +78,6 @@ async def main(a):
         print("official", await state(page))
         await page.go_back(wait_until="domcontentloaded")
         print("back   ", await state(page, 2000))
-        await ctx.close()
 
 
 if __name__ == "__main__":

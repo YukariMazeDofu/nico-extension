@@ -1,15 +1,16 @@
-/* 色は公式（nvpc_next の --colors-*）の値に合わせる。動画とコントロールはテーマによらず黒。 */
+/* 色は公式（nvpc_next の --colors-*）の値に合わせる。動画とコントロールはテーマによらず黒。
+   light-dark() の色は使う要素の color-scheme で決まる。`.player` の中は dark */
 .backdrop {
-  --bg: #f2f2f2;
-  --surface: #fff;
-  --fill: #1a1a1a0d;
-  --fill-hover: #1a1a1a1a;
-  --fg: #1a1a1a;
-  --fg-2: #1a1a1acc;
-  --fg-3: #1a1a1a99;
-  --border: #1a1a1a1a;
+  --bg: light-dark(#f2f2f2, #0d0d0d);
+  --surface: light-dark(#fff, #252525);
+  --fill: light-dark(#1a1a1a0d, #f2f2f21a);
+  --fill-hover: light-dark(#1a1a1a1a, #f2f2f233);
+  --fg: light-dark(#1a1a1a, #f2f2f2);
+  --fg-2: light-dark(#1a1a1acc, #f2f2f2cc);
+  --fg-3: light-dark(#1a1a1a99, #f2f2f299);
+  --border: light-dark(#1a1a1a1a, #f2f2f21a);
   --accent: #1a80e6;
-  --link: #1a80e6;
+  --link: light-dark(#1a80e6, #5aa7f2);
   --lock: #b88f14;
   --nicoru: #d98c00;
   --mine: #e6c200;
@@ -19,43 +20,20 @@
   --ctrl-dim: #888;
   --font-ui: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
   --font-num: 'Avenir Next', Arial, sans-serif;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  .backdrop:not([data-theme='light']) {
-    --bg: #0d0d0d;
-    --surface: #252525;
-    --fill: #f2f2f21a;
-    --fill-hover: #f2f2f233;
-    --fg: #f2f2f2;
-    --fg-2: #f2f2f2cc;
-    --fg-3: #f2f2f299;
-    --border: #f2f2f21a;
-    --link: #5aa7f2;
-    color-scheme: dark;
-  }
-}
-
-.backdrop[data-theme='dark'] {
-  --bg: #0d0d0d;
-  --surface: #252525;
-  --fill: #f2f2f21a;
-  --fill-hover: #f2f2f233;
-  --fg: #f2f2f2;
-  --fg-2: #f2f2f2cc;
-  --fg-3: #f2f2f299;
-  --border: #f2f2f21a;
-  --link: #5aa7f2;
-  color-scheme: dark;
-}
-
-.backdrop {
   position: fixed;
   inset: 0;
   background: var(--bg);
   color: var(--fg);
   font: 14px/1.5 var(--font-ui);
+  color-scheme: light dark;
+
+  &[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  &[data-theme='dark'] {
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -65,10 +43,10 @@
 a {
   color: var(--link);
   text-decoration: none;
-}
 
-a:hover {
-  text-decoration: underline;
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 :focus-visible {
@@ -96,14 +74,55 @@ svg {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+
+  & .solid {
+    fill: currentColor;
+    stroke: none;
+  }
 }
 
-svg .solid {
-  fill: currentColor;
-  stroke: none;
+/* 詳細度 0。各クラスの指定が優先する */
+:where(input[type='range']) {
+  appearance: none;
+  height: 4px;
+  margin: 0;
+  border-radius: 2px;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+  }
 }
 
-/* 列の幅と動画の枠の大きさは controls.ts の fitLayout が決める */
+/* 選択肢のボタンの並び（テーマの切り替え・設定タブ） */
+.theme,
+.segmented {
+  display: flex;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--fill);
+
+  & button {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 26px;
+    border-radius: 999px;
+    color: var(--fg-3);
+
+    &[aria-pressed='true'] {
+      background: var(--surface);
+      color: var(--fg);
+      box-shadow: 0 1px 2px #0002;
+    }
+  }
+}
+
+/* 列の幅と `.player` の大きさは fit.ts が style で設定する */
 .window {
   position: absolute;
   inset: 16px;
@@ -111,10 +130,10 @@ svg .solid {
   grid-template: auto minmax(0, 1fr) / minmax(0, 1fr) 320px;
   justify-content: center;
   gap: 12px 16px;
-}
 
-.window.narrow {
-  grid-template: auto auto minmax(0, 1fr) / minmax(0, 1fr);
+  &.narrow {
+    grid-template: auto auto minmax(0, 1fr) / minmax(0, 1fr);
+  }
 }
 
 /* 上段 */
@@ -164,11 +183,11 @@ svg .solid {
   display: inline-flex;
   gap: 4px;
   align-items: center;
-}
 
-.stat svg {
-  width: 14px;
-  height: 14px;
+  & svg {
+    width: 14px;
+    height: 14px;
+  }
 }
 
 .tags {
@@ -189,18 +208,18 @@ svg .solid {
   color: var(--fg);
   font-size: 12px;
   font-weight: 600;
-}
 
-.tag:hover {
-  background: var(--fill-hover);
-  text-decoration: none;
-}
+  &:hover {
+    background: var(--fill-hover);
+    text-decoration: none;
+  }
 
-.tag svg {
-  width: 13px;
-  height: 13px;
-  color: var(--lock);
-  stroke-width: 2.2;
+  & svg {
+    width: 13px;
+    height: 13px;
+    color: var(--lock);
+    stroke-width: 2.2;
+  }
 }
 
 .actions {
@@ -208,31 +227,6 @@ svg .solid {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-.theme,
-.segmented {
-  display: flex;
-  padding: 2px;
-  border-radius: 999px;
-  background: var(--fill);
-}
-
-.theme button,
-.segmented button {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 26px;
-  border-radius: 999px;
-  color: var(--fg-3);
-}
-
-.theme button[aria-pressed='true'],
-.segmented button[aria-pressed='true'] {
-  background: var(--surface);
-  color: var(--fg);
-  box-shadow: 0 1px 2px #0002;
 }
 
 .theme svg {
@@ -251,15 +245,15 @@ svg .solid {
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
-}
 
-.official:hover {
-  background: var(--fill-hover);
-}
+  &:hover {
+    background: var(--fill-hover);
+  }
 
-.official svg {
-  width: 15px;
-  height: 15px;
+  & svg {
+    width: 15px;
+    height: 15px;
+  }
 }
 
 .close {
@@ -268,15 +262,15 @@ svg .solid {
   width: 32px;
   height: 32px;
   border-radius: 999px;
-}
 
-.close:hover {
-  background: var(--fill-hover);
-}
+  &:hover {
+    background: var(--fill-hover);
+  }
 
-.close svg {
-  width: 22px;
-  height: 22px;
+  & svg {
+    width: 22px;
+    height: 22px;
+  }
 }
 
 /* 動画とコントロール */
@@ -293,12 +287,12 @@ svg .solid {
   background: var(--player);
   color: var(--ctrl);
   color-scheme: dark;
-}
 
-.player:fullscreen {
-  width: 100vw !important;
-  height: 100vh !important;
-  border-radius: 0;
+  &:fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0;
+  }
 }
 
 .stage {
@@ -306,10 +300,10 @@ svg .solid {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-}
 
-.player.idle .stage {
-  cursor: none;
+  .player.idle & {
+    cursor: none;
+  }
 }
 
 video {
@@ -329,23 +323,56 @@ video {
   text-shadow: 0 0 4px #000;
 }
 
+.comments {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.comment-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.osd {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  translate: -50%;
+  padding: 9px 21px;
+  border-radius: 9px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+
+  &.visible {
+    opacity: 1;
+  }
+}
+
 .controls {
   display: grid;
   gap: 2px;
   padding: 0 12px 8px;
   background: var(--player);
-}
 
-.player:not(.pinned) .controls {
-  position: absolute;
-  inset: auto 0 0;
-  padding-top: 24px;
-  background: linear-gradient(transparent, rgb(0 0 0 / 0.75));
-  transition: opacity 0.3s;
-}
+  .player:not(.pinned) & {
+    position: absolute;
+    inset: auto 0 0;
+    padding-top: 24px;
+    background: linear-gradient(transparent, rgb(0 0 0 / 0.75));
+    transition: opacity 0.3s;
+  }
 
-.player:not(.pinned).idle .controls {
-  opacity: 0;
+  .player:not(.pinned).idle & {
+    opacity: 0;
+  }
 }
 
 .bar {
@@ -365,11 +392,16 @@ video {
   height: 34px;
   border-radius: 6px;
   color: var(--ctrl);
-}
 
-.cbtn:hover {
-  background: #ffffff1a;
-  color: var(--ctrl-hover);
+  &:hover {
+    background: #ffffff1a;
+    color: var(--ctrl-hover);
+  }
+
+  &.comment-toggle.off,
+  &.pin.off {
+    opacity: 0.45;
+  }
 }
 
 select.cbtn {
@@ -385,11 +417,6 @@ option {
   color: #f2f2f2;
 }
 
-.comment-toggle.off,
-.pin.off {
-  opacity: 0.45;
-}
-
 .time {
   margin-left: 4px;
   color: var(--ctrl);
@@ -398,52 +425,35 @@ option {
   white-space: nowrap;
 }
 
-/* 詳細度を 0 にして、各クラスの指定を優先する */
-:where(input[type='range']) {
-  appearance: none;
-  height: 4px;
-  margin: 0;
-  border-radius: 2px;
-  cursor: pointer;
+.volume {
+  width: 72px;
+  margin-right: 4px;
+  background: linear-gradient(to right, var(--ctrl) var(--level, 100%), rgb(255 255 255 / 0.2) var(--level, 100%));
 }
 
-:where(input[type='range'])::-webkit-slider-thumb {
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #fff;
-}
-
-/* キャッシュしていない部分は細くする。盛り上がりを出すとき（`.heat`）は帯の色を盛り上がり（`--heat`）にし、
-   出さないときは、再生済みを青、キャッシュ済みを灰、それ以外を暗い灰にする。つまみは再生位置 */
+/* シークバー。`.seek-buffered` はキャッシュ済みの範囲だけを mask で見せ、それ以外は細い `.seek-track` が見える。
+   `.heat` では帯の色を盛り上がり（`--heat`）にし、それ以外は再生済みを青、キャッシュ済みを灰、それ以外を暗い灰にする。つまみは再生位置 */
 .seek {
   position: relative;
   height: 18px;
 }
 
-.seek-track,
-.seek-buffered {
-  position: absolute;
-  /* つまみの中心と帯の位置を合わせる */
-  inset: 4px 8px;
-  pointer-events: none;
-}
-
+/* inset の左右はつまみの中心と帯の位置を合わせる */
 .seek-track {
+  position: absolute;
   inset: 7px 8px;
+  pointer-events: none;
   background: linear-gradient(to right, var(--accent) var(--played, 0%), #333 var(--played, 0%));
 }
 
 .seek-buffered {
+  position: absolute;
+  inset: 4px 8px;
+  pointer-events: none;
   background: linear-gradient(to right, var(--accent) var(--played, 0%), #666 var(--played, 0%));
 }
 
-.seek.heat .seek-track {
-  background: var(--heat);
-}
-
-.seek.heat .seek-buffered {
+.seek.heat :is(.seek-track, .seek-buffered) {
   background: var(--heat);
 }
 
@@ -454,22 +464,16 @@ option {
   height: 100%;
   border-radius: 0;
   background: transparent;
-}
 
-.seek-input::-webkit-slider-thumb {
-  box-sizing: border-box;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #111;
-  border-radius: 2px;
-  background: #fff;
-  box-shadow: 0 0 0 1px #fff;
-}
-
-.volume {
-  width: 72px;
-  margin-right: 4px;
-  background: linear-gradient(to right, var(--ctrl) var(--level, 100%), rgb(255 255 255 / 0.2) var(--level, 100%));
+  &::-webkit-slider-thumb {
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #111;
+    border-radius: 2px;
+    background: #fff;
+    box-shadow: 0 0 0 1px #fff;
+  }
 }
 
 /* コメントの投稿 */
@@ -477,27 +481,32 @@ option {
   display: flex;
   gap: 6px;
   margin: 2px 0 0;
-}
 
-.post input {
-  min-width: 0;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: #ffffff14;
-  color: #f2f2f2;
-  font: 14px var(--font-ui);
-}
+  & input {
+    min-width: 0;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: #ffffff14;
+    color: #f2f2f2;
+    font: 14px var(--font-ui);
 
-.post input::placeholder {
-  color: var(--ctrl-dim);
-}
+    &::placeholder {
+      color: var(--ctrl-dim);
+    }
 
-.post input:focus {
-  border-color: var(--accent);
-  outline: none;
-  background: #ffffff1f;
+    &:focus {
+      border-color: var(--accent);
+      outline: none;
+      background: #ffffff1f;
+    }
+  }
+
+  & :disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
 }
 
 .post-commands {
@@ -518,48 +527,6 @@ option {
   white-space: nowrap;
 }
 
-.post :disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-.osd {
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  translate: -50%;
-  padding: 9px 21px;
-  border-radius: 9px;
-  background: rgb(0 0 0 / 0.6);
-  color: #fff;
-  font-size: 24px;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.osd.visible {
-  opacity: 1;
-}
-
-.comments {
-  position: absolute;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.comments[hidden] {
-  display: none;
-}
-
-.comment-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
 /* 右パネル */
 .panel {
   display: flex;
@@ -567,12 +534,12 @@ option {
   min-height: 0;
   padding-left: 16px;
   border-left: 1px solid var(--border);
-}
 
-.window.narrow .panel {
-  padding: 8px 0 0;
-  border-top: 1px solid var(--border);
-  border-left: 0;
+  .window.narrow & {
+    padding: 8px 0 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
 }
 
 .tabs {
@@ -595,15 +562,20 @@ option {
   color: var(--fg-3);
   font-size: 13px;
   font-weight: 600;
+
+  &:hover {
+    color: var(--fg);
+  }
+
+  &[aria-selected='true'] {
+    border-bottom-color: var(--accent);
+    color: var(--fg);
+  }
 }
 
-.tab:hover {
-  color: var(--fg);
-}
-
-.tab[aria-selected='true'] {
-  border-bottom-color: var(--accent);
-  color: var(--fg);
+.tab-count {
+  font: 600 11px/1 var(--font-num);
+  font-variant-numeric: tabular-nums;
 }
 
 .follow {
@@ -616,21 +588,16 @@ option {
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-}
 
-.follow[hidden] {
-  display: none;
-}
+  &[hidden] {
+    display: none;
+  }
 
-.follow input {
-  margin: 0;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
-.tab-count {
-  font: 600 11px/1 var(--font-num);
-  font-variant-numeric: tabular-nums;
+  & input {
+    margin: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
 }
 
 .tabpanel {
@@ -638,145 +605,30 @@ option {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
+
+  &[hidden] {
+    display: none;
+  }
 }
 
-.tabpanel[hidden] {
-  display: none;
-}
-
+/* 動画の詳細タブ */
 .details {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 14px;
-}
 
-/* コメント一覧。行の高さは固定 */
-.clist {
-  position: relative;
-  font-size: 13px;
-}
+  & .owner {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    color: var(--fg);
+    font-weight: 700;
 
-.clist-empty {
-  margin: 0;
-  color: var(--fg-3);
-}
-
-.crow {
-  position: relative;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  height: 28px;
-  padding: 0 4px;
-  border-radius: 4px;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 28px;
-}
-
-.crow:hover {
-  background: var(--fill);
-}
-
-.crow.current::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0;
-  height: 2px;
-  background: var(--accent);
-}
-
-.crow.mine {
-  background: color-mix(in srgb, var(--mine) 14%, transparent);
-}
-
-.crow.mine::before {
-  content: '';
-  position: absolute;
-  inset: 5px auto 5px 0;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--mine);
-}
-
-.vpos {
-  flex: none;
-  width: 44px;
-  color: var(--fg-3);
-  font: 600 12px/1 var(--font-num);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.vpos:hover {
-  color: var(--link);
-}
-
-.cbody {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--fg-2);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.crow.owner .cbody {
-  color: var(--fg);
-  font-weight: 600;
-}
-
-.nicoru {
-  flex: none;
-  display: inline-flex;
-  gap: 3px;
-  align-items: center;
-  justify-content: flex-end;
-  min-width: 44px;
-  height: 24px;
-  padding: 0 6px;
-  border-radius: 999px;
-  color: var(--fg-3);
-  font: 600 11px/1 var(--font-num);
-  font-variant-numeric: tabular-nums;
-}
-
-.nicoru svg {
-  width: 15px;
-  height: 15px;
-}
-
-.crow:not(:hover) .nicoru.zero[aria-pressed='false'] {
-  opacity: 0.35;
-}
-
-.nicoru:not(:disabled):hover {
-  background: var(--fill-hover);
-  color: var(--fg);
-}
-
-.nicoru[aria-pressed='true'] {
-  color: var(--nicoru);
-}
-
-.nicoru:disabled {
-  cursor: default;
-}
-
-.crow.owner .nicoru {
-  visibility: hidden;
-}
-
-.owner {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  color: var(--fg);
-  font-weight: 700;
-}
-
-.owner:hover {
-  text-decoration: none;
+    &:hover {
+      text-decoration: none;
+    }
+  }
 }
 
 .owner-icon {
@@ -799,15 +651,15 @@ option {
   gap: 6px 12px;
   margin: 0;
   font-size: 13px;
-}
 
-.facts dt {
-  color: var(--fg-3);
-}
+  & dt {
+    color: var(--fg-3);
+  }
 
-.facts dd {
-  min-width: 0;
-  margin: 0;
+  & dd {
+    min-width: 0;
+    margin: 0;
+  }
 }
 
 .series-nav {
@@ -822,18 +674,143 @@ option {
   gap: 6px;
   align-items: center;
   color: var(--fg-2);
+
+  & span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  & small {
+    flex: none;
+    color: var(--fg-3);
+    font-size: 11px;
+  }
 }
 
-.series-video span {
+.description {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--fg-2);
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* コメント一覧タブ。行の高さは固定 */
+.clist {
+  position: relative;
+  font-size: 13px;
+}
+
+.clist-empty {
+  margin: 0;
+  color: var(--fg-3);
+}
+
+.crow {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  height: 28px;
+  padding: 0 4px;
+  border-radius: 4px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 28px;
+
+  &:hover {
+    background: var(--fill);
+  }
+
+  &.current::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  &.mine {
+    background: color-mix(in srgb, var(--mine) 14%, transparent);
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 5px auto 5px 0;
+      width: 3px;
+      border-radius: 2px;
+      background: var(--mine);
+    }
+  }
+}
+
+.vpos {
+  flex: none;
+  width: 44px;
+  color: var(--fg-3);
+  font: 600 12px/1 var(--font-num);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+
+  &:hover {
+    color: var(--link);
+  }
+}
+
+.cbody {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
+  color: var(--fg-2);
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  .crow.owner & {
+    color: var(--fg);
+    font-weight: 600;
+  }
 }
 
-.series-video small {
+.nicoru {
   flex: none;
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 44px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
   color: var(--fg-3);
-  font-size: 11px;
+  font: 600 11px/1 var(--font-num);
+  font-variant-numeric: tabular-nums;
+
+  & svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .crow:not(:hover) &.zero[aria-pressed='false'] {
+    opacity: 0.35;
+  }
+
+  &:not(:disabled):hover {
+    background: var(--fill-hover);
+    color: var(--fg);
+  }
+
+  &[aria-pressed='true'] {
+    color: var(--nicoru);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  .crow.owner & {
+    visibility: hidden;
+  }
 }
 
 /* 設定タブ */
@@ -848,16 +825,16 @@ option {
   display: grid;
   justify-items: start;
   gap: 8px;
+
+  & .segmented button {
+    width: 44px;
+    font-size: 13px;
+    font-weight: 600;
+  }
 }
 
 .setting-title {
   margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.segmented button {
-  width: 44px;
   font-size: 13px;
   font-weight: 600;
 }
@@ -874,10 +851,10 @@ option {
   flex: 1;
   min-width: 0;
   background: linear-gradient(to right, var(--accent) var(--level, 0%), var(--border) var(--level, 0%));
-}
 
-.setting-range::-webkit-slider-thumb {
-  background: var(--accent);
+  &::-webkit-slider-thumb {
+    background: var(--accent);
+  }
 }
 
 .setting-value {
@@ -893,19 +870,6 @@ option {
   color: var(--fg-3);
   font-size: 12px;
   line-height: 1.6;
-}
-
-.setting-hint[hidden] {
-  display: none;
-}
-
-.description {
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-  color: var(--fg-2);
-  font-size: 13px;
-  line-height: 1.7;
-  overflow-wrap: anywhere;
 }
 
 @media (prefers-reduced-motion: no-preference) {

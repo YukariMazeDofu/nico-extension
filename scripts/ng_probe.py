@@ -9,13 +9,9 @@ usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ng_probe.py .output/chrome-
 import argparse
 import asyncio
 import json
-import os
-import tempfile
-from urllib.parse import urlparse
 
-from playwright.async_api import async_playwright
+from probe_common import SHADOW, launch
 
-SHADOW = "document.querySelector('nico-ext-overlay')?.shadowRoot"
 STATE = f"""() => {{ const r = {SHADOW}; const tab = r.querySelectorAll('.tab')[1];
     return {{rows: r.querySelectorAll('.crow').length, tabTitle: tab.title,
       pressed: r.querySelector('.segmented [aria-pressed=true]')?.textContent ?? null,
@@ -24,17 +20,7 @@ THRESHOLDS = {"無": None, "弱": -10000, "中": -4800, "強": -1000}
 
 
 async def main(a):
-    u = urlparse(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or "")
-    px = None
-    if u.hostname:
-        px = {"server": f"{u.scheme}://{u.hostname}:{u.port}"}
-        if u.username:
-            px.update(username=u.username, password=u.password or "")
-    async with async_playwright() as p:
-        ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP",
-            viewport={"width": 1280, "height": 720},
-            args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
+    async with launch(a.ext, viewport={"width": 1280, "height": 720}) as ctx:
         page = await ctx.new_page()
         scores: list[int] = []
         logs: list[str] = []
@@ -70,7 +56,6 @@ async def main(a):
         print("settings tab", await page.evaluate(STATE))
         if a.shot:
             await page.screenshot(path=a.shot)
-        await ctx.close()
 
 
 if __name__ == "__main__":

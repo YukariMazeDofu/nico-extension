@@ -10,15 +10,11 @@ usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ext_probe.py .output/chrome
 import argparse
 import asyncio
 import json
-import os
-from urllib.parse import urlparse
 import re
-import tempfile
 
-from playwright.async_api import async_playwright
+from probe_common import SHADOW, launch
 
 MASK = re.compile(r"\?.*$")
-SHADOW = "document.querySelector('nico-ext-overlay')?.shadowRoot"
 STATE = f"""() => {{ const r = {SHADOW}; const v = r?.querySelector('video'); const q = r?.querySelector('select.quality');
     return v && {{t: +v.currentTime.toFixed(1), paused: v.paused, rs: v.readyState, err: v.error && v.error.code, h: v.videoHeight,
       vol: +v.volume.toFixed(2), muted: v.muted, rate: v.playbackRate, quality: q.value,
@@ -77,16 +73,7 @@ async def check_layout(page):
 
 
 async def main(a):
-    u = urlparse(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or "")
-    px = None
-    if u.hostname:
-        px = {"server": f"{u.scheme}://{u.hostname}:{u.port}"}
-        if u.username:
-            px.update(username=u.username, password=u.password or "")
-    async with async_playwright() as p:
-        ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP",
-            args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
+    async with launch(a.ext) as ctx:
         page = ctx.pages[0] if ctx.pages else await ctx.new_page()
         fatal = asyncio.Event()
 
@@ -187,7 +174,6 @@ async def main(a):
         await page.click(sel)
         await page.wait_for_timeout(5000)
         print("reopened:", await page.evaluate(STATE))
-        await ctx.close()
 
 
 ap = argparse.ArgumentParser()

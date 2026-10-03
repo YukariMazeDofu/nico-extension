@@ -9,12 +9,9 @@ usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/layout_probe.py .output/chr
 import argparse
 import asyncio
 import os
-import tempfile
-from urllib.parse import urlparse
 
-from playwright.async_api import async_playwright
+from probe_common import SHADOW, launch
 
-SHADOW = "document.querySelector('nico-ext-overlay')?.shadowRoot"
 SIZES = [(1280, 720), (1920, 1080), (2560, 1440), (3440, 1440), (1280, 1024), (860, 900)]
 MEASURE = f"""() => {{
   const r = {SHADOW}; const q = (s) => r.querySelector(s).getBoundingClientRect();
@@ -32,17 +29,8 @@ THEME = f"""() => {{ const b = {SHADOW}.querySelector('.backdrop');
 
 
 async def main(a):
-    u = urlparse(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or "")
-    px = None
-    if u.hostname:
-        px = {"server": f"{u.scheme}://{u.hostname}:{u.port}"}
-        if u.username:
-            px.update(username=u.username, password=u.password or "")
     watch = f"https://www.nicovideo.jp/watch/{a.video_id}"
-    async with async_playwright() as p:
-        ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP", color_scheme="light",
-            args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
+    async with launch(a.ext, color_scheme="light") as ctx:
         page = await ctx.new_page()
         page.on("pageerror", lambda e: print("pageerror", e))
 
@@ -83,7 +71,6 @@ async def main(a):
         print("dark, OS light  ", await page.evaluate(THEME))
         await page.evaluate(f"() => {SHADOW}.querySelector('.theme button[title=\"OS の設定に合わせる\"]').click()")
         print("auto, OS light  ", await page.evaluate(THEME))
-        await ctx.close()
 
 
 ap = argparse.ArgumentParser()

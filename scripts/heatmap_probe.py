@@ -10,14 +10,10 @@ usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/heatmap_probe.py .output/ch
 import argparse
 import asyncio
 import json
-import os
 import re
-import tempfile
-from urllib.parse import urlparse
 
-from playwright.async_api import async_playwright
+from probe_common import SHADOW, launch
 
-SHADOW = "document.querySelector('nico-ext-overlay')?.shadowRoot"
 STATE = f"""() => {{ const r = {SHADOW}; const seek = r.querySelector('.seek');
     const group = r.querySelectorAll('.segmented')[1];
     const input = r.querySelector('.seek-input');
@@ -42,17 +38,7 @@ def levels(gradient: str, gamma: float = GAMMA) -> list[float]:
 
 
 async def main(a):
-    u = urlparse(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or "")
-    px = None
-    if u.hostname:
-        px = {"server": f"{u.scheme}://{u.hostname}:{u.port}"}
-        if u.username:
-            px.update(username=u.username, password=u.password or "")
-    async with async_playwright() as p:
-        ctx = await p.chromium.launch_persistent_context(
-            tempfile.mkdtemp(), channel="chromium", headless=True, proxy=px, locale="ja-JP",
-            viewport={"width": 1280, "height": 720},
-            args=[f"--disable-extensions-except={os.path.abspath(a.ext)}", f"--load-extension={os.path.abspath(a.ext)}"])
+    async with launch(a.ext, viewport={"width": 1280, "height": 720}) as ctx:
         page = await ctx.new_page()
         heatmap: list[float] = []
 
@@ -128,7 +114,6 @@ async def main(a):
             await overlay.locator(".segmented button", has_text="隠す").click()
             await page.wait_for_timeout(300)
             await page.screenshot(path=a.shot.removesuffix(".png") + "-off.png")
-        await ctx.close()
 
 
 if __name__ == "__main__":
