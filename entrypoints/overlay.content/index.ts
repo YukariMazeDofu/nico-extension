@@ -122,9 +122,9 @@ export default defineContentScript({
       (e) => {
         if (!playerUi) return;
         e.stopPropagation();
-        // 入力欄では文字の入力に使い、Esc で入力欄から抜ける
+        // 入力欄と設定のスライダーではキーをそのまま使い、Esc で抜ける
         const target = e.composedPath()[0];
-        if (target instanceof HTMLInputElement && target.type === 'text') {
+        if (target instanceof HTMLInputElement && (target.type === 'text' || target.classList.contains('setting-range'))) {
           if (e.key === 'Escape') target.blur();
           return;
         }

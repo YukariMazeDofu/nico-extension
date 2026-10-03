@@ -13,6 +13,8 @@ export interface CommentHooks {
   onVisibilityChange(): void;
   /** 表示するコメントが決まった（取り直したときと共有 NG レベルを変えたときも呼ぶ）。`ngHidden` は共有 NG レベルで隠した件数 */
   onLoaded(threads: NvThread[], ngHidden: number): void;
+  /** コメントを取得した（取り直したときも呼ぶ）。`heatmap` は盛り上がりの値、`threads` は共有 NG レベルで隠す前のもの */
+  onHeatmap(heatmap: number[] | null, threads: NvThread[]): void;
 }
 
 export interface CommentView {
@@ -138,7 +140,8 @@ export function mountComments(
     const ctx = await context;
     const fetched = await fetchCommentThreads(ctx);
     if (destroyed) return;
-    threads = fetched;
+    threads = fetched.threads;
+    hooks.onHeatmap(fetched.heatmap, fetched.threads);
     ngDisabled = ctx.data.ngScoreDisabled;
     apply();
   };
