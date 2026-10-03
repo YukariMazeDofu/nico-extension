@@ -13,6 +13,6 @@ export default defineConfig({
       rule_resources: [{ id: 'direct-watch', enabled: true, path: 'rules.json' }],
     },
   },
-  // CSS は light-dark()・nesting を変換せずに出力する
+  // CSS は light-dark()・nesting を変換せずに出力する。変換した light-dark()（space toggle の変数）は Dark Reader に書き換えられ、背景色と文字色が消える
   vite: () => ({ build: { cssTarget: `chrome${MINIMUM_CHROME_VERSION}` } }),
 });
