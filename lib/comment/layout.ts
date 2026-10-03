@@ -103,14 +103,14 @@ function nakaConflicts(a: PlacedComment, b: PlacedComment): boolean {
   const t1 = Math.max(aIn, bIn);
   const t2 = Math.min(aOut, bOut);
   if (t1 > t2) return false;
-  // 位置の差は時刻に対して線形なので、区間の両端で前後関係が保たれていれば重ならない
+  // 位置の差は時刻に対して線形。区間の両端で前後関係が同じなら、区間内でも重ならない
   const behind = (p: PlacedComment, q: PlacedComment, t: number) => xAt(p, t) - (xAt(q, t) + q.width + COLLISION_PADDING) >= 0;
   return !((behind(b, a, t1) && behind(b, a, t2)) || (behind(a, b, t1) && behind(a, b, t2)));
 }
 
 const fixedConflicts = (a: PlacedComment, b: PlacedComment) => a.startMs < b.endMs && b.startMs < a.endMs;
 
-/** id から [0, 1) の値を決める。画面に収まらないコメントの位置を開き直しても変えないため。 */
+/** id から [0, 1) の値を決める。同じ id には常に同じ値を返す。 */
 function stableRandom(id: string): number {
   let h = 2166136261;
   for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);

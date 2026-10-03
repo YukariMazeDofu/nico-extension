@@ -1,25 +1,11 @@
 import type { VideoInfo, VideoSummary, WatchData } from '@/lib/nico/watch';
 import { ORIGIN, tagUrl, watchUrl } from '@/lib/nico/urls';
+import { el, link } from './dom';
+import { formatCount, formatDateTime } from './format';
 import { type IconName, icon } from './icons';
 
 const ALLOWED_TAGS = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'FONT', 'I', 'P', 'S', 'SPAN', 'STRONG', 'U']);
 const COLOR = /^(#[0-9a-f]{3,8}|[a-z]+)$/i;
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text = ''): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  if (className) e.className = className;
-  e.textContent = text;
-  return e;
-}
-
-/** 新しいタブで開くリンク */
-function link(href: string, text: string, className = ''): HTMLAnchorElement {
-  const a = el('a', className, text);
-  a.href = href;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  return a;
-}
 
 function watchLink(v: VideoSummary, label: string) {
   const a = link(watchUrl(v.id), '', 'series-video');
@@ -63,11 +49,6 @@ export function sanitizeDescription(html: string): DocumentFragment {
   return out;
 }
 
-const formatCount = (n: number) => n.toLocaleString('ja-JP');
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-
 function stat(name: IconName, label: string, value: number) {
   const e = el('span', 'stat');
   e.title = label;
@@ -80,7 +61,7 @@ export function renderHeader(root: HTMLElement, w: WatchData) {
   const { info } = w;
   const meta = el('div', 'meta');
   meta.append(
-    el('span', 'date', formatDate(info.registeredAt)),
+    el('span', 'date', formatDateTime(info.registeredAt)),
     stat('view', '再生', info.count.view),
     stat('comment', 'コメント', info.count.comment),
     stat('mylist', 'マイリスト', info.count.mylist),

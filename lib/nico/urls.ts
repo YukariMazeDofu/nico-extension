@@ -8,7 +8,7 @@ export const watchPath = (videoId: string) => `/watch/${videoId}`;
 
 export const watchUrl = (videoId: string) => `${ORIGIN}${watchPath(videoId)}`;
 
-/** `public/rules.json` がリダイレクトしない（公式プレイヤーで開く）watch ページの URL */
+/** リダイレクト（`public/rules.json`）の対象外で、公式プレイヤーで開く watch ページの URL */
 export const officialWatchUrl = (videoId: string) => `${watchUrl(videoId)}?nico-ext=off`;
 
 export const tagUrl = (name: string) => `${ORIGIN}/tag/${encodeURIComponent(name)}`;

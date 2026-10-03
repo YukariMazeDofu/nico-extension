@@ -3,13 +3,13 @@ import { layoutComments, type MeasureText, STAGE_HEIGHT, STAGE_WIDTH } from '@/l
 import { type CommentSpec, toSpec } from '@/lib/comment/spec';
 import { CommentTimeline } from '@/lib/comment/timeline';
 import { WebGlCommentRenderer } from '@/lib/comment/webgl-renderer';
+import { log } from '@/lib/log';
 import { fetchCommentThreads, type NvThread } from '@/lib/nico/comment';
 import type { WatchContext } from '@/lib/nico/session';
-import { commentSettings, type NgScoreLevel, ngScoreSetting } from '@/lib/settings';
+import { bindSetting, commentSettings, type NgScoreLevel, ngScoreSetting } from '@/lib/settings';
 import { createMediaClock } from './clock';
 
 export interface CommentHooks {
-  log(msg: string): void;
   onVisibilityChange(): void;
   /** 表示するコメントが決まった（取り直したときと共有 NG レベルを変えたときも呼ぶ）。`ngHidden` は共有 NG レベルで隠した件数 */
   onLoaded(threads: NvThread[], ngHidden: number): void;
@@ -22,11 +22,10 @@ export interface CommentView {
   setVisible(visible: boolean): void;
   /** コメントを取り直して並べ直す */
   reload(): Promise<void>;
-  destroy(): void;
 }
 
 function createMeasureText(): MeasureText {
-  const g = document.createElement('canvas').getContext('2d')!;
+  const g = new OffscreenCanvas(1, 1).getContext('2d')!;
   let current = '';
   return (text, font) => {
     if (font !== current) g.font = current = font;
@@ -40,8 +39,8 @@ export function mountComments(
   video: HTMLVideoElement,
   context: Promise<WatchContext>,
   hooks: CommentHooks,
+  signal: AbortSignal,
 ): CommentView {
-  const { log } = hooks;
   let renderer: WebGlCommentRenderer | undefined;
   try {
     renderer = new WebGlCommentRenderer(root);
@@ -55,7 +54,6 @@ export function mountComments(
   let ngDisabled = false;
   let visible = true;
   let playing = false;
-  let destroyed = false;
   let raf = 0;
 
   const isPlaying = () => !video.paused && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA;
@@ -93,12 +91,22 @@ export function mountComments(
     reseek();
   });
   if (root.parentElement) resize.observe(root.parentElement);
+  signal.addEventListener(
+    'abort',
+    () => {
+      cancelAnimationFrame(raf);
+      resize.disconnect();
+      renderer?.destroy();
+    },
+    { once: true },
+  );
 
-  video.addEventListener('playing', () => setPlaying(true));
-  video.addEventListener('pause', () => setPlaying(false));
-  video.addEventListener('waiting', () => setPlaying(false));
-  video.addEventListener('seeking', () => setPlaying(false));
-  video.addEventListener('seeked', () => {
+  const on = (type: keyof HTMLMediaElementEventMap, listener: () => void) => video.addEventListener(type, listener, { signal });
+  on('playing', () => setPlaying(true));
+  on('pause', () => setPlaying(false));
+  on('waiting', () => setPlaying(false));
+  on('seeking', () => setPlaying(false));
+  on('seeked', () => {
     playing = isPlaying();
     reseek();
   });
@@ -139,23 +147,27 @@ export function mountComments(
   const load = async () => {
     const ctx = await context;
     const fetched = await fetchCommentThreads(ctx);
-    if (destroyed) return;
+    if (signal.aborted) return;
     threads = fetched.threads;
     hooks.onHeatmap(fetched.heatmap, fetched.threads);
     ngDisabled = ctx.data.ngScoreDisabled;
     apply();
   };
 
-  const unwatchNg = ngScoreSetting.watch((level) => {
-    ngLevel = level;
-    if (!destroyed && threads.length) apply();
-  });
-
-  (async () => {
-    applyVisible((await commentSettings.getValue()).visible);
-    ngLevel = await ngScoreSetting.getValue();
-    await load();
-  })().catch((e) => log(`comments failed: ${e}`));
+  Promise.all([
+    bindSetting(commentSettings, (v) => v.visible !== visible && applyVisible(v.visible), signal),
+    bindSetting(
+      ngScoreSetting,
+      (level) => {
+        if (level === ngLevel) return;
+        ngLevel = level;
+        if (threads.length) apply();
+      },
+      signal,
+    ),
+  ])
+    .then(load)
+    .catch((e) => log(`comments failed: ${e}`));
 
   return {
     get visible() {
@@ -166,12 +178,5 @@ export function mountComments(
       applyVisible(v);
     },
     reload: load,
-    destroy() {
-      destroyed = true;
-      unwatchNg();
-      cancelAnimationFrame(raf);
-      resize.disconnect();
-      renderer?.destroy();
-    },
   };
 }

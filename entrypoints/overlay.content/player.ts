@@ -1,5 +1,6 @@
 import Hls, { type Level } from 'hls.js';
 import hlsWorkerSource from 'hls.js/dist/hls.worker.js?raw';
+import { log } from '@/lib/log';
 import { WatchEventTracker } from '@/lib/nico/heartbeat';
 import { WatchContext } from '@/lib/nico/session';
 import { fetchHlsContentUrl, type DomandVariant } from '@/lib/nico/watch';
@@ -18,7 +19,6 @@ export interface Quality {
 }
 
 export interface PlayerHooks {
-  log(msg: string): void;
   onQualityChange(): void;
   onError(msg: string): void;
 }
@@ -30,7 +30,6 @@ export interface Player {
   readonly playingQuality: Quality | undefined;
   readonly context: Promise<WatchContext>;
   setQuality(level: number): void;
-  destroy(): void;
 }
 
 function qualityOf(level: Level, index: number, videos: DomandVariant[]): Quality {
@@ -42,9 +41,8 @@ function levelForHeight(qualities: Quality[], maxHeight: number): number {
   return (qualities.find((q) => q.height <= maxHeight) ?? qualities.at(-1))?.level ?? AUTO_LEVEL;
 }
 
-export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: PlayerHooks): Player {
-  const { log } = hooks;
-  let destroyed = false;
+/** `signal` の abort でハートビートの `end` を送り、hls.js を止める。 */
+export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: PlayerHooks, signal: AbortSignal): Player {
   let hls: Hls | undefined;
   let ctx: WatchContext | undefined;
   let tracker: WatchEventTracker | undefined;
@@ -108,7 +106,7 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     try {
       if (!ctx.isFresh('accessRightKey')) log('access right key expired, refetching watch data');
       const url = await fetchHlsContentUrl(await ctx.fresh('accessRightKey'));
-      if (destroyed) return;
+      if (signal.aborted) return;
       log(`session recreated at ${position.toFixed(1)}`);
       attach(url, position);
       if (!paused) await video.play().catch((e) => log(`play() rejected: ${e}`));
@@ -118,15 +116,23 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     }
   };
 
-  const onPageHide = () => tracker?.end(video.currentTime * 1000, true);
-  window.addEventListener('pagehide', onPageHide);
+  window.addEventListener('pagehide', () => tracker?.end(video.currentTime * 1000, true), { signal });
+  signal.addEventListener(
+    'abort',
+    () => {
+      tracker?.end(video.currentTime * 1000);
+      hls?.destroy();
+    },
+    { once: true },
+  );
 
-  video.addEventListener('play', () => tracker?.play());
-  video.addEventListener('playing', () => tracker?.setWatching(true));
-  video.addEventListener('pause', () => tracker?.setWatching(false));
-  video.addEventListener('ended', () => tracker?.countEnd());
-  video.addEventListener('volumechange', () => save({ volume: video.volume, muted: video.muted }));
-  video.addEventListener('ratechange', () => {
+  const on = (type: keyof HTMLMediaElementEventMap, listener: () => void) => video.addEventListener(type, listener, { signal });
+  on('play', () => tracker?.play());
+  on('playing', () => tracker?.setWatching(true));
+  on('pause', () => tracker?.setWatching(false));
+  on('ended', () => tracker?.countEnd());
+  on('volumechange', () => save({ volume: video.volume, muted: video.muted }));
+  on('ratechange', () => {
     video.defaultPlaybackRate = video.playbackRate;
     save({ playbackRate: video.playbackRate });
   });
@@ -137,12 +143,12 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     video.muted = settings.muted;
     video.defaultPlaybackRate = video.playbackRate = settings.playbackRate;
     ctx = await context;
-    if (destroyed) return;
+    if (signal.aborted) return;
     log(`watch data: ${ctx.data.videos.length} videos, ${ctx.data.audios.length} audios`);
-    tracker = new WatchEventTracker(ctx, log);
+    tracker = new WatchEventTracker(ctx);
     tracker.start();
     const url = await fetchHlsContentUrl(ctx.data);
-    if (destroyed) return;
+    if (signal.aborted) return;
     log('content url acquired');
     attach(url, -1);
     await video.play().catch((e) => log(`play() rejected: ${e}`));
@@ -166,12 +172,6 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
       const q = qualities.find((x) => x.level === level);
       save({ quality: q ? q.height : 'auto' });
       if (hls) applyQuality(hls);
-    },
-    destroy() {
-      destroyed = true;
-      window.removeEventListener('pagehide', onPageHide);
-      tracker?.end(video.currentTime * 1000);
-      hls?.destroy();
     },
   };
 }
