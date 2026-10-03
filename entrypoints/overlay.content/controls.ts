@@ -1,6 +1,7 @@
 import type { WatchContext } from '@/lib/nico/session';
 import { layoutSettings } from '@/lib/settings';
 import { mountComments } from './comments';
+import { type IconName, icon } from './icons';
 import { renderHeader, renderPanel } from './info';
 import { AUTO_LEVEL, createPlayer } from './player';
 
@@ -10,7 +11,11 @@ const SEEK_STEP = 5;
 const SEEK_STEP_LONG = 10;
 const VOLUME_STEP = 0.05;
 const WHEEL_STEP_PX = 50;
-const OSD_MS = 800;
+const OSD_MS = 1500;
+const PANEL_MIN = 320;
+const PANEL_MAX = 480;
+const NARROW_MAX = 900;
+const NARROW_PANEL_VH = 0.3;
 
 export interface PlayerUi {
   /** 処理したキーなら true */
@@ -25,6 +30,15 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
   e.textContent = text;
   return e;
 }
+
+function iconButton(className: string, name: IconName): HTMLButtonElement {
+  const b = el('button', `cbtn ${className}`);
+  b.type = 'button';
+  b.append(icon(name));
+  return b;
+}
+
+const setIcon = (b: HTMLButtonElement, name: IconName) => b.replaceChildren(icon(name));
 
 const formatTime = (s: number) => {
   if (!Number.isFinite(s)) return '0:00';
@@ -60,22 +74,22 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
   seek.min = '0';
   seek.step = 'any';
   seek.value = '0';
-  const play = el('button', 'play', '▶');
-  const mute = el('button', 'mute');
+  const play = iconButton('play', 'play');
+  const mute = iconButton('mute', 'volume');
   const volume = el('input', 'volume');
   volume.type = 'range';
   volume.min = '0';
   volume.max = '1';
   volume.step = 'any';
   const time = el('span', 'time');
-  const rate = el('select', 'rate');
+  const rate = el('select', 'cbtn rate');
   rate.title = '再生速度';
   for (const r of RATES) rate.append(new Option(`${r}x`, String(r)));
-  const quality = el('select', 'quality');
+  const quality = el('select', 'cbtn quality');
   quality.title = '画質';
-  const commentToggle = el('button', 'comment-toggle', '💬');
-  const pin = el('button', 'pin', '📌');
-  const fullscreen = el('button', 'fullscreen', '⛶');
+  const commentToggle = iconButton('comment-toggle', 'comment');
+  const pin = iconButton('pin', 'dock');
+  const fullscreen = iconButton('fullscreen', 'fullscreen');
   fullscreen.title = '全画面 (F)';
   const bar = el('div', 'bar');
   bar.append(play, mute, volume, time, el('span', 'spacer'), commentToggle, rate, quality, pin, fullscreen);
@@ -100,14 +114,15 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
     seek.style.setProperty('--buffered', `${((buffered ?? 0) / d) * 100}%`);
   };
   const renderPlay = () => {
-    play.textContent = video.paused ? '▶' : '❚❚';
+    setIcon(play, video.paused ? 'play' : 'pause');
     play.title = video.paused ? '再生 (Space)' : '一時停止 (Space)';
     stage.classList.toggle('paused', video.paused);
   };
   const renderVolume = () => {
-    mute.textContent = video.muted || video.volume === 0 ? '🔇' : '🔊';
+    setIcon(mute, video.muted || video.volume === 0 ? 'muted' : 'volume');
     mute.title = video.muted ? 'ミュート解除 (M)' : 'ミュート (M)';
     volume.value = String(video.muted ? 0 : video.volume);
+    volume.style.setProperty('--level', `${(video.muted ? 0 : video.volume) * 100}%`);
   };
   const renderRate = () => {
     const v = String(video.playbackRate);
@@ -123,11 +138,45 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
     quality.value = String(player.selectedLevel);
   };
 
+  /** 動画の枠を動画の縦横比に合わせ、横に余った幅はパネルに回す。それでも余る分は左右の余白にする。 */
+  const fitLayout = () => {
+    if (document.fullscreenElement) return;
+    const cs = getComputedStyle(layout);
+    const colGap = parseFloat(cs.columnGap) || 0;
+    const rowGap = parseFloat(cs.rowGap) || 0;
+    const width = layout.clientWidth;
+    const height = layout.clientHeight - header.offsetHeight - rowGap;
+    const controlsHeight = pinned ? controls.offsetHeight : 0;
+    const aspect = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
+    const narrow = window.innerWidth <= NARROW_MAX;
+    layout.classList.toggle('narrow', narrow);
+    let videoWidth: number;
+    if (narrow) {
+      const available = height - window.innerHeight * NARROW_PANEL_VH - rowGap - controlsHeight;
+      videoWidth = Math.min(width, available * aspect);
+      layout.style.gridTemplateColumns = '';
+    } else {
+      videoWidth = Math.min(width - PANEL_MIN - colGap, (height - controlsHeight) * aspect);
+      const panelWidth = Math.min(PANEL_MAX, Math.max(PANEL_MIN, width - videoWidth - colGap));
+      layout.style.gridTemplateColumns = `${videoWidth}px ${panelWidth}px`;
+    }
+    videoWidth = Math.max(0, videoWidth);
+    playerBox.style.width = narrow ? `${videoWidth}px` : '';
+    playerBox.style.height = `${videoWidth / aspect + controlsHeight}px`;
+  };
+  const fitObserver = new ResizeObserver(fitLayout);
+  fitObserver.observe(layout);
+  fitObserver.observe(header);
+  fitObserver.observe(controls);
+  video.addEventListener('resize', fitLayout);
+  document.addEventListener('fullscreenchange', fitLayout);
+
   let pinned = true;
   const renderPin = () => {
     playerBox.classList.toggle('pinned', pinned);
     pin.classList.toggle('off', !pinned);
-    pin.title = pinned ? 'コントロールを自動で隠す (H)' : 'コントロールを常に表示 (H)';
+    pin.title = pinned ? 'コントロールを動画に重ねる (H)' : 'コントロールを動画の下に置く (H)';
+    fitLayout();
   };
   const togglePin = () => {
     pinned = !pinned;
@@ -328,6 +377,8 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
     destroy() {
       clearTimeout(idleTimer);
       clearTimeout(osdTimer);
+      fitObserver.disconnect();
+      document.removeEventListener('fullscreenchange', fitLayout);
       if (document.fullscreenElement) document.exitFullscreen();
       comments.destroy();
       player.destroy();

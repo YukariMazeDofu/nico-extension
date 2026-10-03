@@ -26,3 +26,8 @@ export interface LayoutSettings {
 export const layoutSettings = storage.defineItem<LayoutSettings>('local:layout', {
   fallback: { controlsPinned: true },
 });
+
+/** 'auto' は OS の設定（`prefers-color-scheme`）に合わせる */
+export type Theme = 'auto' | 'light' | 'dark';
+
+export const themeSetting = storage.defineItem<Theme>('local:theme', { fallback: 'auto' });

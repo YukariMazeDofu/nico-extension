@@ -27,7 +27,7 @@ export interface VideoInfo {
   count: { view: number; comment: number; mylist: number; like: number };
   tags: { name: string; isLocked: boolean }[];
   genre?: string;
-  owner?: { name: string; iconUrl: string; url: string };
+  owner?: { kind: 'user' | 'channel'; name: string; iconUrl: string; url: string };
   series?: { title: string; url: string; prev?: VideoSummary; next?: VideoSummary };
 }
 
@@ -62,9 +62,9 @@ export const accessRightsHlsUrl = (w: WatchData) =>
 function videoInfoOf(r: any): VideoInfo {
   const summary = (v: any): VideoSummary | undefined => (v ? { id: v.id, title: v.title } : undefined);
   const owner = r.owner
-    ? { name: r.owner.nickname, iconUrl: r.owner.iconUrl, url: `https://www.nicovideo.jp/user/${r.owner.id}` }
+    ? { kind: 'user' as const, name: r.owner.nickname, iconUrl: r.owner.iconUrl, url: `https://www.nicovideo.jp/user/${r.owner.id}` }
     : r.channel
-      ? { name: r.channel.name, iconUrl: r.channel.thumbnail?.smallUrl, url: `https://ch.nicovideo.jp/${r.channel.id}` }
+      ? { kind: 'channel' as const, name: r.channel.name, iconUrl: r.channel.thumbnail?.smallUrl, url: `https://ch.nicovideo.jp/${r.channel.id}` }
       : undefined;
   return {
     description: r.video.description,
