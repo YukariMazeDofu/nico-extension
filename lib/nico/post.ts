@@ -1,6 +1,6 @@
-import { FRONTEND_HEADERS, NicoApiError, type CommentThreadInfo, type WatchData } from './watch';
-
-const NVAPI = 'https://nvapi.nicovideo.jp';
+import { sendToThread } from './comment';
+import { commentKey, dropCommentKey } from './keys';
+import { NicoApiError, type CommentThreadInfo, type WatchData } from './watch';
 
 /** 投稿できない理由 */
 export type PostBlock = 'notLoggedIn' | 'noThread' | 'banned' | 'restricted';
@@ -47,27 +47,6 @@ export function postBlockOf(w: WatchData): PostBlock | undefined {
   return undefined;
 }
 
-/** 鍵はスレッドごとに使い回す */
-const postKeys = new Map<string, Promise<PostKey>>();
-
-function postKeyOf(threadId: string): Promise<PostKey> {
-  let key = postKeys.get(threadId);
-  if (!key) {
-    key = (async () => {
-      const res = await fetch(`${NVAPI}/v1/comment/keys/post?threadId=${threadId}&pc=1`, {
-        credentials: 'include',
-        headers: FRONTEND_HEADERS,
-      });
-      const json = await res.json();
-      if (!res.ok) throw new NicoApiError('comment/keys/post failed', res.status, json.meta?.errorCode);
-      return json.data;
-    })();
-    key.catch(() => postKeys.delete(threadId));
-    postKeys.set(threadId, key);
-  }
-  return key;
-}
-
 /** 通常のスレッドに投稿する。鍵の期限切れ（`EXPIRED_TOKEN`）では鍵を取り直して 1 回だけ再送する。 */
 export async function postComment(w: WatchData, draft: CommentDraft): Promise<PostedComment> {
   const thread = postThreadOf(w);
@@ -78,20 +57,23 @@ export async function postComment(w: WatchData, draft: CommentDraft): Promise<Po
   } else if (!commands.includes('184')) {
     commands = [...commands, '184'];
   }
+  const query = { threadId: thread.id };
   for (let retried = false; ; retried = true) {
-    const key = await postKeyOf(thread.id);
+    const key = await commentKey<PostKey>('post', query);
     if (key.challenge?.isRequired) throw new ChallengeRequiredError();
-    const res = await fetch(`${w.nvComment.server}/v1/threads/${thread.id}/comments?pc=1`, {
-      method: 'POST',
-      headers: { ...FRONTEND_HEADERS, 'X-Client-Os-Type': 'others' },
-      body: JSON.stringify({ videoId: w.videoId, commands, body: draft.body, vposMs: draft.vposMs, postKey: key.postKey }),
+    const res = await sendToThread(w, 'POST', `${thread.id}/comments`, {
+      videoId: w.videoId,
+      commands,
+      body: draft.body,
+      vposMs: draft.vposMs,
+      postKey: key.postKey,
     });
     const json = await res.json();
     if (res.ok) {
-      if (json.data.shouldRefreshKey) postKeys.delete(thread.id);
+      if (json.data.shouldRefreshKey) dropCommentKey('post', query);
       return json.data;
     }
-    postKeys.delete(thread.id);
+    dropCommentKey('post', query);
     const code = json.meta?.errorCode;
     if (retried || code !== 'EXPIRED_TOKEN') throw new NicoApiError('comment post failed', res.status, code);
   }

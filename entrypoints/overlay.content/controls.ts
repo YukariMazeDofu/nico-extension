@@ -1,5 +1,6 @@
 import type { WatchContext } from '@/lib/nico/session';
 import { layoutSettings } from '@/lib/settings';
+import { mountCommentList } from './comment-list';
 import { mountComments } from './comments';
 import { type IconName, icon } from './icons';
 import { renderHeader, renderPanel } from './info';
@@ -17,6 +18,8 @@ const PANEL_MIN = 320;
 const PANEL_MAX = 480;
 const NARROW_MAX = 900;
 const NARROW_PANEL_VH = 0.3;
+
+type PanelTab = 'details' | 'comments';
 
 export interface PlayerUi {
   /** 処理したキーなら true */
@@ -63,6 +66,21 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
   headerActions.append(...actions);
   header.append(headerBody, headerActions);
   const panel = el('aside', 'panel');
+  const tabs = el('div', 'tabs');
+  tabs.setAttribute('role', 'tablist');
+  const details = el('div', 'tabpanel details');
+  const tabButtons = {} as Record<PanelTab, HTMLButtonElement>;
+  for (const [tab, label] of [
+    ['details', '動画の詳細'],
+    ['comments', 'コメント'],
+  ] as const) {
+    const b = el('button', 'tab', label);
+    b.type = 'button';
+    b.setAttribute('role', 'tab');
+    b.addEventListener('click', () => selectTab(tab));
+    tabButtons[tab] = b;
+    tabs.append(b);
+  }
   const playerBox = el('div', 'player');
   const stage = el('div', 'stage');
   const video = el('video', '');
@@ -198,7 +216,30 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
       message.textContent = msg;
     },
   });
-  const comments = mountComments(commentRoot, video, player.context, { log, onVisibilityChange: renderComments });
+  const commentList = mountCommentList(video, player.context, {
+    log,
+    notify: (msg) => showOsd(msg),
+    onCount(count) {
+      tabButtons.comments.textContent = 'コメント';
+      tabButtons.comments.append(el('span', 'tab-count', count.toLocaleString('ja-JP')));
+    },
+  });
+  commentList.element.classList.add('tabpanel');
+  tabs.append(commentList.followToggle);
+  panel.append(tabs, commentList.element, details);
+  const selectTab = (tab: PanelTab) => {
+    for (const [t, b] of Object.entries(tabButtons)) b.setAttribute('aria-selected', String(t === tab));
+    commentList.element.hidden = tab !== 'comments';
+    details.hidden = tab !== 'details';
+    commentList.followToggle.hidden = tab !== 'comments';
+    commentList.setActive(tab === 'comments');
+  };
+  selectTab('details');
+  const comments = mountComments(commentRoot, video, player.context, {
+    log,
+    onVisibilityChange: renderComments,
+    onLoaded: (threads) => commentList.setThreads(threads),
+  });
   const commentForm = mountCommentForm(video, player.context, {
     log,
     notify: (msg) => showOsd(msg),
@@ -208,7 +249,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
   player.context.then(
     (ctx) => {
       renderHeader(headerBody, ctx.data);
-      renderPanel(panel, ctx.data.info);
+      renderPanel(details, ctx.data.info);
     },
     () => (headerBody.textContent = ''),
   );

@@ -1,5 +1,7 @@
 export const FRONTEND_ID = '6';
 
+export const NVAPI = 'https://nvapi.nicovideo.jp';
+
 export const FRONTEND_HEADERS = {
   'X-Frontend-Id': FRONTEND_ID,
   'X-Frontend-Version': '0',
@@ -69,7 +71,7 @@ export class NicoApiError extends Error {
 export const watchUrl = (videoId: string) => `https://www.nicovideo.jp/watch/${videoId}`;
 
 export const accessRightsHlsUrl = (w: WatchData) =>
-  `https://nvapi.nicovideo.jp/v1/watch/${w.videoId}/access-rights/hls?actionTrackId=${w.watchTrackId}`;
+  `${NVAPI}/v1/watch/${w.videoId}/access-rights/hls?actionTrackId=${w.watchTrackId}`;
 
 function videoInfoOf(r: any): VideoInfo {
   const summary = (v: any): VideoSummary | undefined => (v ? { id: v.id, title: v.title } : undefined);

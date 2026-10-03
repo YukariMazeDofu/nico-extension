@@ -11,6 +11,8 @@
   --accent: #1a80e6;
   --link: #1a80e6;
   --lock: #b88f14;
+  --nicoru: #d98c00;
+  --mine: #e6c200;
   --player: #000;
   --ctrl: #ccc;
   --ctrl-hover: #fff;
@@ -525,21 +527,209 @@ option {
 
 /* 右パネル */
 .panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
   padding-left: 16px;
   border-left: 1px solid var(--border);
 }
 
 .window.narrow .panel {
-  padding: 12px 0 0;
+  padding: 8px 0 0;
   border-top: 1px solid var(--border);
   border-left: 0;
+}
+
+.tabs {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 6px 8px;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  color: var(--fg-3);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tab:hover {
+  color: var(--fg);
+}
+
+.tab[aria-selected='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--fg);
+}
+
+.follow {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  margin: 0 0 0 auto;
+  color: var(--fg-3);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.follow[hidden] {
+  display: none;
+}
+
+.follow input {
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.tab-count {
+  font: 600 11px/1 var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabpanel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.tabpanel[hidden] {
+  display: none;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 14px;
+}
+
+/* コメント一覧。行の高さは固定 */
+.clist {
+  position: relative;
+  font-size: 13px;
+}
+
+.clist-empty {
+  margin: 0;
+  color: var(--fg-3);
+}
+
+.crow {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  height: 28px;
+  padding: 0 4px;
+  border-radius: 4px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 28px;
+}
+
+.crow:hover {
+  background: var(--fill);
+}
+
+.crow.current::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.crow.mine {
+  background: color-mix(in srgb, var(--mine) 14%, transparent);
+}
+
+.crow.mine::before {
+  content: '';
+  position: absolute;
+  inset: 5px auto 5px 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--mine);
+}
+
+.vpos {
+  flex: none;
+  width: 44px;
+  color: var(--fg-3);
+  font: 600 12px/1 var(--font-num);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.vpos:hover {
+  color: var(--link);
+}
+
+.cbody {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crow.owner .cbody {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.nicoru {
+  flex: none;
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 44px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: var(--fg-3);
+  font: 600 11px/1 var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.nicoru svg {
+  width: 15px;
+  height: 15px;
+}
+
+.crow:not(:hover) .nicoru.zero[aria-pressed='false'] {
+  opacity: 0.35;
+}
+
+.nicoru:not(:disabled):hover {
+  background: var(--fill-hover);
+  color: var(--fg);
+}
+
+.nicoru[aria-pressed='true'] {
+  color: var(--nicoru);
+}
+
+.nicoru:disabled {
+  cursor: default;
+}
+
+.crow.owner .nicoru {
+  visibility: hidden;
 }
 
 .owner {
@@ -622,6 +812,8 @@ option {
 
 @media (prefers-reduced-motion: no-preference) {
   .tag,
+  .tab,
+  .nicoru,
   .theme button,
   .cbtn,
   .official,
