@@ -31,6 +31,17 @@ export interface VideoInfo {
   series?: { title: string; url: string; prev?: VideoSummary; next?: VideoSummary };
 }
 
+export interface CommentThreadInfo {
+  id: string;
+  fork: 'owner' | 'main' | 'easy';
+  isDefaultPostTarget: boolean;
+  isEasyCommentPostTarget: boolean;
+  /** チャンネル・コミュニティの動画のスレッド。`184` を付けると投稿できない */
+  isThreadkeyRequired: boolean;
+  /** 0 は通常、4 は投稿できない、5 は公式が投稿を送らない */
+  postkeyStatus: number;
+}
+
 export interface WatchData {
   videoId: string;
   title: string;
@@ -42,6 +53,7 @@ export interface WatchData {
   videos: DomandVariant[];
   audios: DomandVariant[];
   nvComment: { server: string; threadKey: string; params: unknown };
+  commentThreads: CommentThreadInfo[];
 }
 
 export class NicoApiError extends Error {
@@ -103,6 +115,14 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
     videos: r.media.domand.videos,
     audios: r.media.domand.audios,
     nvComment: r.comment.nvComment,
+    commentThreads: r.comment.threads.map((t: any) => ({
+      id: String(t.id),
+      fork: t.forkLabel,
+      isDefaultPostTarget: t.isDefaultPostTarget,
+      isEasyCommentPostTarget: t.isEasyCommentPostTarget,
+      isThreadkeyRequired: t.isThreadkeyRequired,
+      postkeyStatus: t.postkeyStatus,
+    })),
   };
 }
 

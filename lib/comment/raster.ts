@@ -3,6 +3,8 @@ import { cssFont, type PlacedComment } from './layout';
 const STROKE_WIDTH = 2.8;
 const STROKE_OPACITY = 0.4;
 const LIVE_OPACITY = 0.5;
+const MINE_BORDER_WIDTH = 2;
+const MINE_BORDER_COLOR = '#FFFF00';
 
 /** 縁取りの色（`r g b`）。文字が黒なら白 */
 const strokeRgb = (c: PlacedComment) => (c.spec.color.toUpperCase() === '#000000' ? '255 255 255' : '0 0 0');
@@ -16,7 +18,7 @@ export interface Raster {
   offsetY: number;
 }
 
-/** コメント 1 件を `scale` 倍の大きさでビットマップに描く。縁取りの分だけ配置の矩形より広い。 */
+/** コメント 1 件を `scale` 倍の大きさでビットマップに描く。縁取りの分だけ配置の矩形より広い。自分の投稿は配置の矩形の外側を黄色の枠で囲む。 */
 export function rasterize(c: PlacedComment, scale: number): Raster {
   const lineWidth = STROKE_WIDTH * 2 * scale;
   const pad = Math.ceil(lineWidth);
@@ -38,5 +40,12 @@ export function rasterize(c: PlacedComment, scale: number): Raster {
     g.strokeText(line, pad, y);
     g.fillText(line, pad, y);
   });
+  if (c.spec.mine) {
+    const w = MINE_BORDER_WIDTH * scale;
+    g.lineWidth = w;
+    g.lineJoin = 'miter';
+    g.strokeStyle = MINE_BORDER_COLOR;
+    g.strokeRect(pad - w / 2, pad - w / 2, c.width * scale + w, c.height * scale + w);
+  }
   return { canvas, offsetX: -pad, offsetY: -pad };
 }

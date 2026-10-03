@@ -20,6 +20,8 @@ export interface CommentSpec {
   full: boolean;
   /** `ender`: 改行による縮小と幅の縮小をしない */
   ender: boolean;
+  /** 自分の投稿 */
+  mine: boolean;
 }
 
 const WHITE = '#FFFFFF';
@@ -76,6 +78,7 @@ export function toSpec(c: NvComment, fork: CommentFork): CommentSpec | undefined
     live: false,
     full: false,
     ender: false,
+    mine: c.isMyPost,
   };
   const seen = new Set<string>();
   const once = (kind: string) => !seen.has(kind) && !!seen.add(kind);
