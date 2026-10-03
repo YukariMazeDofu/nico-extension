@@ -46,7 +46,7 @@ async def main(a):
             await page.goto(TOP, wait_until="domcontentloaded")
             await page.wait_for_timeout(3000)
             async with ctx.expect_page() as info:
-                await page.locator("a[href*='/watch/']").first.click(modifiers=["Control"])
+                await page.locator("a[href^='https://www.nicovideo.jp/watch/'], a[href^='/watch/']").first.click(modifiers=["Control"])
             tab = await info.value
             await tab.wait_for_load_state("domcontentloaded")
             return tab
