@@ -1,17 +1,18 @@
+import { isNgScoreHidden } from '@/lib/comment/ng';
 import { layoutComments, type MeasureText, STAGE_HEIGHT, STAGE_WIDTH } from '@/lib/comment/layout';
 import { type CommentSpec, toSpec } from '@/lib/comment/spec';
 import { CommentTimeline } from '@/lib/comment/timeline';
 import { WebGlCommentRenderer } from '@/lib/comment/webgl-renderer';
 import { fetchCommentThreads, type NvThread } from '@/lib/nico/comment';
 import type { WatchContext } from '@/lib/nico/session';
-import { commentSettings } from '@/lib/settings';
+import { commentSettings, type NgScoreLevel, ngScoreSetting } from '@/lib/settings';
 import { createMediaClock } from './clock';
 
 export interface CommentHooks {
   log(msg: string): void;
   onVisibilityChange(): void;
-  /** コメントを取得した（取り直したときも呼ぶ） */
-  onLoaded(threads: NvThread[]): void;
+  /** 表示するコメントが決まった（取り直したときと共有 NG レベルを変えたときも呼ぶ）。`ngHidden` は共有 NG レベルで隠した件数 */
+  onLoaded(threads: NvThread[], ngHidden: number): void;
 }
 
 export interface CommentView {
@@ -47,6 +48,9 @@ export function mountComments(
   }
   const now = createMediaClock(video);
   let timeline: CommentTimeline | undefined;
+  let threads: NvThread[] = [];
+  let ngLevel: NgScoreLevel = 'middle';
+  let ngDisabled = false;
   let visible = true;
   let playing = false;
   let destroyed = false;
@@ -110,16 +114,18 @@ export function mountComments(
     hooks.onVisibilityChange();
   };
 
-  const load = async () => {
-    const threads = await fetchCommentThreads(await context);
-    if (destroyed) return;
-    hooks.onLoaded(threads);
+  const apply = () => {
+    const level = ngDisabled ? 'none' : ngLevel;
+    const shown = threads.map((t) => ({ ...t, comments: t.comments.filter((c) => !isNgScoreHidden(c, level)) }));
+    const total = (ts: NvThread[]) => ts.reduce((n, t) => n + t.comments.length, 0);
+    const ngHidden = total(threads) - total(shown);
+    hooks.onLoaded(shown, ngHidden);
     if (!renderer) return;
-    const specs = threads.flatMap((t) => t.comments.map((c) => toSpec(c, t.fork))).filter((s): s is CommentSpec => !!s);
+    const specs = shown.flatMap((t) => t.comments.map((c) => toSpec(c, t.fork))).filter((s): s is CommentSpec => !!s);
     const started = performance.now();
     const placed = layoutComments(specs, createMeasureText());
     log(
-      `comments: ${threads.map((t) => `${t.fork}=${t.comments.length}`).join(' ')}, ` +
+      `comments: ${threads.map((t) => `${t.fork}=${t.comments.length}`).join(' ')}, ng(${level}) hidden ${ngHidden}, ` +
         `placed ${placed.length} in ${(performance.now() - started).toFixed(0)}ms`,
     );
     timeline?.clear();
@@ -128,8 +134,23 @@ export function mountComments(
     reseek();
   };
 
+  const load = async () => {
+    const ctx = await context;
+    const fetched = await fetchCommentThreads(ctx);
+    if (destroyed) return;
+    threads = fetched;
+    ngDisabled = ctx.data.ngScoreDisabled;
+    apply();
+  };
+
+  const unwatchNg = ngScoreSetting.watch((level) => {
+    ngLevel = level;
+    if (!destroyed && threads.length) apply();
+  });
+
   (async () => {
     applyVisible((await commentSettings.getValue()).visible);
+    ngLevel = await ngScoreSetting.getValue();
     await load();
   })().catch((e) => log(`comments failed: ${e}`));
 
@@ -144,6 +165,7 @@ export function mountComments(
     reload: load,
     destroy() {
       destroyed = true;
+      unwatchNg();
       cancelAnimationFrame(raf);
       resize.disconnect();
       renderer?.destroy();

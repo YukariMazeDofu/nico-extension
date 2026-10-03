@@ -210,14 +210,16 @@ svg .solid {
   align-items: center;
 }
 
-.theme {
+.theme,
+.segmented {
   display: flex;
   padding: 2px;
   border-radius: 999px;
   background: var(--fill);
 }
 
-.theme button {
+.theme button,
+.segmented button {
   display: grid;
   place-items: center;
   width: 30px;
@@ -226,7 +228,8 @@ svg .solid {
   color: var(--fg-3);
 }
 
-.theme button[aria-pressed='true'] {
+.theme button[aria-pressed='true'],
+.segmented button[aria-pressed='true'] {
   background: var(--surface);
   color: var(--fg);
   box-shadow: 0 1px 2px #0002;
@@ -801,6 +804,43 @@ option {
   font-size: 11px;
 }
 
+/* 設定タブ */
+.settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 20px;
+}
+
+.setting {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.setting-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.segmented button {
+  width: 44px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.setting-hint {
+  margin: 0;
+  color: var(--fg-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.setting-hint[hidden] {
+  display: none;
+}
+
 .description {
   padding-top: 14px;
   border-top: 1px solid var(--border);
@@ -815,6 +855,7 @@ option {
   .tab,
   .nicoru,
   .theme button,
+  .segmented button,
   .cbtn,
   .official,
   .close {

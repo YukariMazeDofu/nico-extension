@@ -6,6 +6,7 @@ import { type IconName, icon } from './icons';
 import { renderHeader, renderPanel } from './info';
 import { AUTO_LEVEL, createPlayer } from './player';
 import { mountCommentForm } from './post';
+import { mountSettingsPanel } from './settings-panel';
 
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const IDLE_MS = 2500;
@@ -19,7 +20,7 @@ const PANEL_MAX = 480;
 const NARROW_MAX = 900;
 const NARROW_PANEL_VH = 0.3;
 
-type PanelTab = 'details' | 'comments';
+type PanelTab = 'details' | 'comments' | 'settings';
 
 export interface PlayerUi {
   /** 処理したキーなら true */
@@ -73,6 +74,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
   for (const [tab, label] of [
     ['details', '動画の詳細'],
     ['comments', 'コメント'],
+    ['settings', '設定'],
   ] as const) {
     const b = el('button', 'tab', label);
     b.type = 'button';
@@ -226,11 +228,14 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
   });
   commentList.element.classList.add('tabpanel');
   tabs.append(commentList.followToggle);
-  panel.append(tabs, commentList.element, details);
+  const settingsPanel = mountSettingsPanel(player.context);
+  settingsPanel.element.classList.add('tabpanel');
+  panel.append(tabs, commentList.element, details, settingsPanel.element);
   const selectTab = (tab: PanelTab) => {
     for (const [t, b] of Object.entries(tabButtons)) b.setAttribute('aria-selected', String(t === tab));
     commentList.element.hidden = tab !== 'comments';
     details.hidden = tab !== 'details';
+    settingsPanel.element.hidden = tab !== 'settings';
     commentList.followToggle.hidden = tab !== 'comments';
     commentList.setActive(tab === 'comments');
   };
@@ -238,7 +243,10 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
   const comments = mountComments(commentRoot, video, player.context, {
     log,
     onVisibilityChange: renderComments,
-    onLoaded: (threads) => commentList.setThreads(threads),
+    onLoaded(threads, ngHidden) {
+      commentList.setThreads(threads);
+      tabButtons.comments.title = `共有 NG レベルで ${ngHidden.toLocaleString('ja-JP')} 件を隠しています`;
+    },
   });
   const commentForm = mountCommentForm(video, player.context, {
     log,
@@ -432,6 +440,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
       document.removeEventListener('fullscreenchange', fitLayout);
       if (document.fullscreenElement) document.exitFullscreen();
       comments.destroy();
+      settingsPanel.destroy();
       player.destroy();
     },
   };

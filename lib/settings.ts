@@ -18,6 +18,11 @@ export const commentSettings = storage.defineItem<CommentSettings>('local:commen
   fallback: { visible: true },
 });
 
+/** 共有 NG レベル（無・弱・中・強） */
+export type NgScoreLevel = 'none' | 'low' | 'middle' | 'high';
+
+export const ngScoreSetting = storage.defineItem<NgScoreLevel>('local:ngScore', { fallback: 'middle' });
+
 export interface CommentListSettings {
   /** 再生位置に合わせて一覧をスクロールする */
   follow: boolean;

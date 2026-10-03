@@ -56,6 +56,8 @@ export interface WatchData {
   audios: DomandVariant[];
   nvComment: { server: string; threadKey: string; params: unknown };
   commentThreads: CommentThreadInfo[];
+  /** true の動画では共有 NG レベルで隠さない */
+  ngScoreDisabled: boolean;
 }
 
 export class NicoApiError extends Error {
@@ -125,6 +127,7 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
       isThreadkeyRequired: t.isThreadkeyRequired,
       postkeyStatus: t.postkeyStatus,
     })),
+    ngScoreDisabled: !!r.comment.ng?.ngScore?.isDisabled,
   };
 }
 
