@@ -122,6 +122,12 @@ export default defineContentScript({
       (e) => {
         if (!playerUi) return;
         e.stopPropagation();
+        // 入力欄では文字の入力に使い、Esc で入力欄から抜ける
+        const target = e.composedPath()[0];
+        if (target instanceof HTMLInputElement && target.type === 'text') {
+          if (e.key === 'Escape') target.blur();
+          return;
+        }
         if (e.key === 'Escape') {
           if (!document.fullscreenElement) close?.();
         } else if (playerUi.handleKey(e)) {

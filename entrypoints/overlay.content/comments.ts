@@ -15,6 +15,8 @@ export interface CommentHooks {
 export interface CommentView {
   readonly visible: boolean;
   setVisible(visible: boolean): void;
+  /** コメントを取り直して並べ直す */
+  reload(): Promise<void>;
   destroy(): void;
 }
 
@@ -106,8 +108,7 @@ export function mountComments(
     hooks.onVisibilityChange();
   };
 
-  (async () => {
-    applyVisible((await commentSettings.getValue()).visible);
+  const load = async () => {
     if (!renderer) return;
     const threads = await fetchCommentThreads(await context);
     if (destroyed) return;
@@ -118,9 +119,15 @@ export function mountComments(
       `comments: ${threads.map((t) => `${t.fork}=${t.comments.length}`).join(' ')}, ` +
         `placed ${placed.length} in ${(performance.now() - started).toFixed(0)}ms`,
     );
+    timeline?.clear();
     timeline = new CommentTimeline(placed, renderer);
     playing = isPlaying();
     reseek();
+  };
+
+  (async () => {
+    applyVisible((await commentSettings.getValue()).visible);
+    await load();
   })().catch((e) => log(`comments failed: ${e}`));
 
   return {
@@ -131,6 +138,7 @@ export function mountComments(
       commentSettings.setValue({ visible: v });
       applyVisible(v);
     },
+    reload: load,
     destroy() {
       destroyed = true;
       cancelAnimationFrame(raf);

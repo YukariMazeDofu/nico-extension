@@ -4,6 +4,7 @@ import { mountComments } from './comments';
 import { type IconName, icon } from './icons';
 import { renderHeader, renderPanel } from './info';
 import { AUTO_LEVEL, createPlayer } from './player';
+import { mountCommentForm } from './post';
 
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const IDLE_MS = 2500;
@@ -198,6 +199,12 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
     },
   });
   const comments = mountComments(commentRoot, video, player.context, { log, onVisibilityChange: renderComments });
+  const commentForm = mountCommentForm(video, player.context, {
+    log,
+    notify: (msg) => showOsd(msg),
+    onPosted: () => comments.reload().catch((e) => log(`comments reload failed: ${e}`)),
+  });
+  controls.append(commentForm.element);
   player.context.then(
     (ctx) => {
       renderHeader(headerBody, ctx.data);
@@ -269,7 +276,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
   const wake = () => {
     playerBox.classList.remove('idle');
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => !video.paused && playerBox.classList.add('idle'), IDLE_MS);
+    idleTimer = setTimeout(() => !video.paused && !controls.matches(':focus-within') && playerBox.classList.add('idle'), IDLE_MS);
   };
 
   video.addEventListener('click', togglePlay);
@@ -353,6 +360,9 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
           break;
         case 'h':
           togglePin();
+          break;
+        case 'Enter':
+          commentForm.focus();
           break;
         case '<':
           stepRate(-1);
