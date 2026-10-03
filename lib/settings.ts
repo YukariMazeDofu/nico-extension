@@ -23,6 +23,12 @@ export type NgScoreLevel = 'none' | 'low' | 'middle' | 'high';
 
 export const ngScoreSetting = storage.defineItem<NgScoreLevel>('local:ngScore', { fallback: 'middle' });
 
+/** シークバーに盛り上がり（`voltageZone`）の帯を出す */
+export const seekHeatmapSetting = storage.defineItem<boolean>('local:seekHeatmap', { fallback: true });
+
+/** 盛り上がりの値を何乗して色に当てるか。1 より大きいほど、多い区間だけが赤寄りになる */
+export const seekHeatmapGammaSetting = storage.defineItem<number>('local:seekHeatmapGamma', { fallback: 2 });
+
 export interface CommentListSettings {
   /** 再生位置に合わせて一覧をスクロールする */
   follow: boolean;

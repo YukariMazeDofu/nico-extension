@@ -2,6 +2,7 @@ import type { WatchContext } from '@/lib/nico/session';
 import { layoutSettings } from '@/lib/settings';
 import { mountCommentList } from './comment-list';
 import { mountComments } from './comments';
+import { mountSeekHeatmap } from './heatmap';
 import { type IconName, icon } from './icons';
 import { renderHeader, renderPanel } from './info';
 import { AUTO_LEVEL, createPlayer } from './player';
@@ -90,7 +91,11 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
   const message = el('div', 'message');
   const osd = el('div', 'osd');
   const controls = el('div', 'controls');
-  const seek = el('input', 'seek');
+  const seekBar = el('div', 'seek');
+  const seekTrack = el('div', 'seek-track');
+  const seekBuffered = el('div', 'seek-buffered');
+  const seek = el('input', 'seek-input');
+  seekBar.append(seekTrack, seekBuffered, seek);
   seek.type = 'range';
   seek.min = '0';
   seek.step = 'any';
@@ -114,7 +119,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
   fullscreen.title = '全画面 (F)';
   const bar = el('div', 'bar');
   bar.append(play, mute, volume, time, el('span', 'spacer'), commentToggle, rate, quality, pin, fullscreen);
-  controls.append(seek, bar);
+  controls.append(seekBar, bar);
   stage.append(video, commentRoot, message, osd);
   playerBox.append(stage, controls);
   const layout = el('div', 'window');
@@ -128,11 +133,12 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
     time.textContent = `${formatTime(position)} / ${formatTime(video.duration)}`;
     if (!seeking) seek.value = String(video.currentTime);
     const d = video.duration || 1;
-    const buffered = [...Array(video.buffered.length).keys()]
-      .map((i) => [video.buffered.start(i), video.buffered.end(i)] as const)
-      .find(([s, e]) => s <= video.currentTime && video.currentTime <= e)?.[1];
-    seek.style.setProperty('--played', `${(position / d) * 100}%`);
-    seek.style.setProperty('--buffered', `${((buffered ?? 0) / d) * 100}%`);
+    const pct = (t: number) => `${((t / d) * 100).toFixed(3)}%`;
+    const ranges = [...Array(video.buffered.length).keys()].map(
+      (i) => `transparent ${pct(video.buffered.start(i))}, #000 ${pct(video.buffered.start(i))} ${pct(video.buffered.end(i))}, transparent ${pct(video.buffered.end(i))}`,
+    );
+    seekBar.style.setProperty('--played', pct(position));
+    seekBuffered.style.maskImage = `linear-gradient(to right, transparent 0%, ${[...ranges, 'transparent 100%'].join(', ')})`;
   };
   const renderPlay = () => {
     setIcon(play, video.paused ? 'play' : 'pause');
@@ -240,6 +246,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
     commentList.setActive(tab === 'comments');
   };
   selectTab('details');
+  const heatmap = mountSeekHeatmap(seekBar, video);
   const comments = mountComments(commentRoot, video, player.context, {
     log,
     onVisibilityChange: renderComments,
@@ -247,6 +254,13 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
       commentList.setThreads(threads);
       tabButtons.comments.title = `共有 NG レベルで ${ngHidden.toLocaleString('ja-JP')} 件を隠しています`;
     },
+    onHeatmap: (values, threads) =>
+      heatmap.set(
+        values && {
+          heatmap: values,
+          vposMs: threads.filter((t) => t.fork !== 'owner').flatMap((t) => t.comments.map((c) => c.vposMs)),
+        },
+      ),
   });
   const commentForm = mountCommentForm(video, player.context, {
     log,
@@ -440,6 +454,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { log, ac
       document.removeEventListener('fullscreenchange', fitLayout);
       if (document.fullscreenElement) document.exitFullscreen();
       comments.destroy();
+      heatmap.destroy();
       settingsPanel.destroy();
       player.destroy();
     },

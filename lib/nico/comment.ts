@@ -27,7 +27,13 @@ export interface NvThread {
   comments: NvComment[];
 }
 
-async function postThreads(w: WatchData): Promise<NvThread[]> {
+export interface NvThreadsResult {
+  threads: NvThread[];
+  /** 動画を等分した区間ごとの盛り上がりの値（`voltageZone.heatmap`）。ない動画では null */
+  heatmap: number[] | null;
+}
+
+async function postThreads(w: WatchData): Promise<NvThreadsResult> {
   const { server, threadKey, params } = w.nvComment;
   const res = await fetch(`${server}/v1/threads`, {
     method: 'POST',
@@ -40,7 +46,8 @@ async function postThreads(w: WatchData): Promise<NvThread[]> {
   });
   const json = await res.json();
   if (!res.ok) throw new NicoApiError('nvcomment threads failed', res.status, json.meta?.errorCode);
-  return json.data.threads;
+  const heatmap = json.data.voltageZone?.heatmap;
+  return { threads: json.data.threads, heatmap: Array.isArray(heatmap) && heatmap.length ? heatmap : null };
 }
 
 /** nvcomment のスレッドへの書き込み。Cookie は送らず、ボディは JSON の文字列（`Content-Type` なし）。 */
@@ -54,7 +61,7 @@ export function sendToThread(w: WatchData, method: string, path: string, body: u
 }
 
 /** `threadKey` が拒否されたら watch ページを取り直して 1 回だけ再試行する。 */
-export async function fetchCommentThreads(ctx: WatchContext): Promise<NvThread[]> {
+export async function fetchCommentThreads(ctx: WatchContext): Promise<NvThreadsResult> {
   try {
     return await postThreads(await ctx.fresh('threadKey'));
   } catch (e) {
