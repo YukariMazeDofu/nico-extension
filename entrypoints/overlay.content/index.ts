@@ -2,6 +2,7 @@ import './style.css';
 import { watchIdFromAnchor, watchIdFromDirectPath } from '@/lib/nico/link';
 import { officialWatchUrl, watchPath, watchUrl } from '@/lib/nico/urls';
 import { mountPlayerUi, type PlayerUi } from './controls';
+import { el, iconButton } from './dom';
 import { icon } from './icons';
 import { mountThemeSwitch } from './theme';
 
@@ -34,28 +35,23 @@ export default defineContentScript({
     // `/watch/{id}` を直接開いたときは、リダイレクト先のページで開いて閉じたらページを離れる
     const directId = watchIdFromDirectPath(location.pathname);
 
-    const log = (msg: string) => console.info(`[nico-ext] ${msg}`);
-
     const open = async (videoId: string, href?: string) => {
       close?.();
       markVisited([watchUrl(videoId), ...(href ? [href] : [])]);
-      const ui = await createShadowRootUi<{ ui: PlayerUi; destroyTheme(): void }>(ctx, {
+      const ui = await createShadowRootUi<AbortController>(ctx, {
         name: 'nico-ext-overlay',
         position: 'modal',
         isolateEvents: true,
         onMount(container) {
           // WXT はホストに zIndex を付けるが、シャドウルートのリセット `:host{all:initial !important}` で打ち消される
           container.style.zIndex = '2147483647';
-          const backdrop = document.createElement('div');
-          backdrop.className = 'backdrop';
-          const button = document.createElement('button');
-          button.className = 'close';
-          button.append(icon('close'));
+          const controller = new AbortController();
+          const backdrop = el('div', 'backdrop');
+          const button = iconButton('close', 'close');
           button.title = '閉じる (Esc)';
           button.setAttribute('aria-label', '閉じる');
           button.addEventListener('click', () => close?.());
-          const official = document.createElement('button');
-          official.className = 'official';
+          const official = el('button', 'official');
           official.append(icon('external'), '公式で開く');
           official.title = '公式プレイヤーで開く';
           official.addEventListener('click', () => {
@@ -73,14 +69,13 @@ export default defineContentScript({
             if (directId) location.assign(watchUrl(id));
             else open(id, a.href);
           });
-          const theme = mountThemeSwitch(backdrop);
-          const mounted = mountPlayerUi(backdrop, videoId, { log, actions: [theme.element, official, button] });
-          playerUi = mounted;
-          return { ui: mounted, destroyTheme: theme.destroy };
+          const { signal } = controller;
+          const theme = mountThemeSwitch(backdrop, signal);
+          playerUi = mountPlayerUi(backdrop, videoId, { actions: [theme, official, button], signal });
+          return controller;
         },
-        onRemove(mounted) {
-          mounted?.ui.destroy();
-          mounted?.destroyTheme();
+        onRemove(controller) {
+          controller?.abort();
         },
       });
       ui.mount();

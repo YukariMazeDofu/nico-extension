@@ -32,7 +32,7 @@ export function rasterize(c: PlacedComment, scale: number): Raster {
   g.lineWidth = lineWidth;
   g.strokeStyle = `rgb(${strokeRgb(c)} / ${STROKE_OPACITY})`;
   g.fillStyle = c.spec.color;
-  // CSS と同じく、フォントの ascent + descent を行の高さの中央に置く
+  // フォントの ascent + descent を行の高さの中央に置く
   const m = g.measureText('あ');
   const baseline = (lineHeight - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
   lines.forEach((line, i) => {

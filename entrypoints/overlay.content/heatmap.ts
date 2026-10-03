@@ -1,5 +1,5 @@
 import { refineHeatmap } from '@/lib/comment/heatmap';
-import { seekHeatmapGammaSetting, seekHeatmapSetting } from '@/lib/settings';
+import { bindSetting, seekHeatmapGammaSetting, seekHeatmapSetting } from '@/lib/settings';
 
 const BINS = 200;
 /** 盛り上がりの低い側から高い側への色（OKLCH）。青・水色・緑・黄・橙・赤の順 */
@@ -36,7 +36,8 @@ export interface HeatmapSource {
 export function mountSeekHeatmap(
   track: HTMLElement,
   video: HTMLVideoElement,
-): { set(source: HeatmapSource | null): void; destroy(): void } {
+  signal: AbortSignal,
+): (source: HeatmapSource | null) => void {
   let source: HeatmapSource | null = null;
   let values: number[] | null = null;
   let visible = true;
@@ -55,26 +56,25 @@ export function mountSeekHeatmap(
       source && video.duration > 0 ? refineHeatmap(source.heatmap, source.vposMs, video.duration * 1000, BINS) : null;
     paint();
   };
-  const applyVisible = (v: boolean) => {
-    visible = v;
-    paint();
-  };
-  const applyGamma = (g: number) => {
-    gamma = g;
-    paint();
-  };
-  seekHeatmapSetting.getValue().then(applyVisible);
-  seekHeatmapGammaSetting.getValue().then(applyGamma);
-  const unwatch = [seekHeatmapSetting.watch(applyVisible), seekHeatmapGammaSetting.watch(applyGamma)];
-  video.addEventListener('durationchange', refine);
-  return {
-    set(s) {
-      source = s;
-      refine();
+  bindSetting(
+    seekHeatmapSetting,
+    (v) => {
+      visible = v;
+      paint();
     },
-    destroy() {
-      for (const u of unwatch) u();
-      video.removeEventListener('durationchange', refine);
+    signal,
+  );
+  bindSetting(
+    seekHeatmapGammaSetting,
+    (g) => {
+      gamma = g;
+      paint();
     },
+    signal,
+  );
+  video.addEventListener('durationchange', refine, { signal });
+  return (s) => {
+    source = s;
+    refine();
   };
 }

@@ -1,8 +1,11 @@
+import { log } from '@/lib/log';
+import { NicoApiError } from '@/lib/nico/api';
 import type { CommentFork, NvComment, NvThread } from '@/lib/nico/comment';
 import { cancelNicoru, type NicoruBlock, nicoru, nicoruBlockOf } from '@/lib/nico/nicoru';
 import type { WatchContext } from '@/lib/nico/session';
-import { NicoApiError } from '@/lib/nico/api';
-import { commentListSettings } from '@/lib/settings';
+import { bindSetting, commentListSettings } from '@/lib/settings';
+import { el } from './dom';
+import { formatDateTime, formatTime } from './format';
 import { icon } from './icons';
 
 const BLOCK_TEXT: Record<NicoruBlock, string> = {
@@ -16,10 +19,10 @@ interface Row {
   threadId: string;
   fork: CommentFork;
   element: HTMLElement;
+  nicoruButton: HTMLButtonElement;
 }
 
 export interface CommentListHooks {
-  log(msg: string): void;
   notify(msg: string): void;
   onCount(count: number): void;
 }
@@ -33,14 +36,6 @@ export interface CommentList {
   setActive(active: boolean): void;
 }
 
-const formatVpos = (ms: number) => {
-  const s = Math.floor(ms / 1000);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-};
-
-const formatPostedAt = (iso: string) =>
-  new Date(iso).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-
 function errorText(e: unknown): string {
   if (e instanceof NicoApiError && (e.code === 'FORBIDDEN' || e.code === 'PREMIUM_ONLY')) return 'プレミアム会員のみニコれます';
   if (e instanceof NicoApiError) return `ニコるに失敗しました (${e.code ?? e.status})`;
@@ -48,19 +43,19 @@ function errorText(e: unknown): string {
 }
 
 /** 右パネルのコメント一覧。再生位置に追従してスクロールし、ニコる・取り消しができる。 */
-export function mountCommentList(video: HTMLVideoElement, context: Promise<WatchContext>, hooks: CommentListHooks): CommentList {
-  const { log } = hooks;
-  const root = document.createElement('div');
-  root.className = 'clist';
-  const empty = document.createElement('p');
-  empty.className = 'clist-empty';
-  empty.textContent = '読み込み中…';
+export function mountCommentList(
+  video: HTMLVideoElement,
+  context: Promise<WatchContext>,
+  hooks: CommentListHooks,
+  signal: AbortSignal,
+): CommentList {
+  const root = el('div', 'clist');
+  const empty = el('p', 'clist-empty', '読み込み中…');
   root.append(empty);
 
-  const followToggle = document.createElement('label');
-  followToggle.className = 'follow';
+  const followToggle = el('label', 'follow');
   followToggle.title = '再生位置に合わせて一覧をスクロールする';
-  const followInput = document.createElement('input');
+  const followInput = el('input');
   followInput.type = 'checkbox';
   followInput.checked = true;
   followToggle.append(followInput, '自動スクロール');
@@ -81,8 +76,7 @@ export function mountCommentList(video: HTMLVideoElement, context: Promise<Watch
   );
 
   function renderNicoru(row: Row) {
-    const button = row.element.querySelector<HTMLButtonElement>('.nicoru')!;
-    const { comment } = row;
+    const { comment, nicoruButton: button } = row;
     const block = ctx && nicoruBlockOf(ctx.data, row.threadId, row.fork);
     button.disabled = !ctx || !!block || busy.has(comment);
     button.setAttribute('aria-pressed', String(!!comment.nicoruId));
@@ -92,20 +86,14 @@ export function mountCommentList(video: HTMLVideoElement, context: Promise<Watch
   }
 
   function rowOf(c: NvComment, threadId: string, fork: CommentFork): Row {
-    const e = document.createElement('div');
-    e.className = `crow${fork === 'owner' ? ' owner' : ''}${c.isMyPost ? ' mine' : ''}`;
-    const vpos = document.createElement('button');
-    vpos.className = 'vpos';
-    vpos.textContent = formatVpos(c.vposMs);
+    const e = el('div', `crow${fork === 'owner' ? ' owner' : ''}${c.isMyPost ? ' mine' : ''}`);
+    const vpos = el('button', 'vpos', formatTime(c.vposMs / 1000));
     vpos.title = 'この位置へ移動';
-    const body = document.createElement('span');
-    body.className = 'cbody';
-    body.textContent = c.body;
-    body.title = `${c.body}\n${formatPostedAt(c.postedAt)}${fork === 'owner' ? '（投稿者）' : ''}`;
-    const button = document.createElement('button');
-    button.className = 'nicoru';
-    e.append(vpos, body, button);
-    const row = { comment: c, threadId, fork, element: e };
+    const body = el('span', 'cbody', c.body);
+    body.title = `${c.body}\n${formatDateTime(c.postedAt)}${fork === 'owner' ? '（投稿者）' : ''}`;
+    const nicoruButton = el('button', 'nicoru');
+    e.append(vpos, body, nicoruButton);
+    const row = { comment: c, threadId, fork, element: e, nicoruButton };
     rowByElement.set(e, row);
     renderNicoru(row);
     return row;
@@ -173,12 +161,16 @@ export function mountCommentList(video: HTMLVideoElement, context: Promise<Watch
     commentListSettings.setValue({ follow: followInput.checked });
     follow();
   });
-  commentListSettings.getValue().then((v) => {
-    followInput.checked = v.follow;
-    follow();
-  });
-  video.addEventListener('timeupdate', follow);
-  video.addEventListener('seeked', follow);
+  bindSetting(
+    commentListSettings,
+    (v) => {
+      followInput.checked = v.follow;
+      follow();
+    },
+    signal,
+  );
+  video.addEventListener('timeupdate', follow, { signal });
+  video.addEventListener('seeked', follow, { signal });
 
   return {
     element: root,

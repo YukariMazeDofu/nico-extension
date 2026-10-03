@@ -1,4 +1,4 @@
-/** これ以上 `currentTime` から離れたら、シークなどとみなして `currentTime` に合わせ直す */
+/** `currentTime` からこれ以上離れたら `currentTime` に合わせ直す */
 const MAX_GAP_MS = 250;
 /** `currentTime` との差を詰める割合（1 回の呼び出しあたり） */
 const GAIN = 0.05;

@@ -51,3 +51,17 @@ export const layoutSettings = storage.defineItem<LayoutSettings>('local:layout',
 export type Theme = 'auto' | 'light' | 'dark';
 
 export const themeSetting = storage.defineItem<Theme>('local:theme', { fallback: 'auto' });
+
+export interface Setting<T> {
+  getValue(): Promise<T>;
+  setValue(value: T): Promise<void>;
+  watch(cb: (value: T) => void): () => void;
+}
+
+/** 保存された値と、ほかのタブでの変更を `apply` に渡す。`signal` の abort で追従をやめる。初めの値を渡し終えたら resolve する。 */
+export function bindSetting<T>(setting: Setting<T>, apply: (value: T) => void, signal: AbortSignal): Promise<void> {
+  signal.addEventListener('abort', setting.watch(apply), { once: true });
+  return setting.getValue().then((v) => {
+    if (!signal.aborted) apply(v);
+  });
+}

@@ -1,3 +1,4 @@
+import { log } from '@/lib/log';
 import { FRONTEND_HEADERS, FRONTEND_ID, nicoFetch } from './api';
 import type { WatchContext } from './session';
 import { accessRightsHlsUrl, watchUrl } from './urls';
@@ -77,10 +78,7 @@ export class WatchEventTracker {
   private watchingSince?: number;
   private endCount = 0;
 
-  constructor(
-    private readonly ctx: WatchContext,
-    private readonly log: (msg: string) => void,
-  ) {
+  constructor(private readonly ctx: WatchContext) {
     this.watch = ctx.data;
   }
 
@@ -129,7 +127,7 @@ export class WatchEventTracker {
     const key = this.ctx.isFresh('accessRightKey') ? this.ctx.data.accessRightKey : undefined;
     this.queue = this.queue
       .then(() => sendWatchEvent(this.watch, key, e, opts))
-      .then(() => this.log(`watch event ${type} accepted`))
-      .catch((err) => this.log(`watch event ${type} failed: ${err}`));
+      .then(() => log(`watch event ${type} accepted`))
+      .catch((err) => log(`watch event ${type} failed: ${err}`));
   }
 }

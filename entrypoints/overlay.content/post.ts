@@ -1,6 +1,8 @@
+import { log } from '@/lib/log';
+import { NicoApiError } from '@/lib/nico/api';
 import { ChallengeRequiredError, Invalid184Error, type PostBlock, postBlockOf, postComment } from '@/lib/nico/post';
 import type { WatchContext } from '@/lib/nico/session';
-import { NicoApiError } from '@/lib/nico/api';
+import { el } from './dom';
 
 const BLOCK_TEXT: Record<PostBlock, string> = {
   notLoggedIn: 'ログインするとコメントできます',
@@ -10,7 +12,6 @@ const BLOCK_TEXT: Record<PostBlock, string> = {
 };
 
 export interface CommentFormHooks {
-  log(msg: string): void;
   notify(msg: string): void;
   onPosted(): void;
 }
@@ -29,19 +30,13 @@ function errorText(e: unknown): string {
 
 /** コマンド欄と本文の入力欄。Enter で今の再生位置に投稿する。 */
 export function mountCommentForm(video: HTMLVideoElement, context: Promise<WatchContext>, hooks: CommentFormHooks): CommentForm {
-  const { log } = hooks;
-  const form = document.createElement('form');
-  form.className = 'post';
-  const commands = document.createElement('input');
-  commands.className = 'post-commands';
+  const form = el('form', 'post');
+  const commands = el('input', 'post-commands');
   commands.placeholder = 'コマンド';
   commands.title = 'コマンド（例: ue red big）';
-  const body = document.createElement('input');
-  body.className = 'post-body';
+  const body = el('input', 'post-body');
   body.placeholder = '読み込み中…';
-  const submit = document.createElement('button');
-  submit.className = 'post-submit';
-  submit.textContent = 'コメント';
+  const submit = el('button', 'post-submit', 'コメント');
   for (const e of [commands, body]) {
     e.type = 'text';
     e.autocomplete = 'off';
