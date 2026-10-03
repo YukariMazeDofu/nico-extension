@@ -2,7 +2,7 @@ import { layoutComments, type MeasureText, STAGE_HEIGHT, STAGE_WIDTH } from '@/l
 import { type CommentSpec, toSpec } from '@/lib/comment/spec';
 import { CommentTimeline } from '@/lib/comment/timeline';
 import { WebGlCommentRenderer } from '@/lib/comment/webgl-renderer';
-import { fetchCommentThreads } from '@/lib/nico/comment';
+import { fetchCommentThreads, type NvThread } from '@/lib/nico/comment';
 import type { WatchContext } from '@/lib/nico/session';
 import { commentSettings } from '@/lib/settings';
 import { createMediaClock } from './clock';
@@ -10,6 +10,8 @@ import { createMediaClock } from './clock';
 export interface CommentHooks {
   log(msg: string): void;
   onVisibilityChange(): void;
+  /** コメントを取得した（取り直したときも呼ぶ） */
+  onLoaded(threads: NvThread[]): void;
 }
 
 export interface CommentView {
@@ -109,9 +111,10 @@ export function mountComments(
   };
 
   const load = async () => {
-    if (!renderer) return;
     const threads = await fetchCommentThreads(await context);
     if (destroyed) return;
+    hooks.onLoaded(threads);
+    if (!renderer) return;
     const specs = threads.flatMap((t) => t.comments.map((c) => toSpec(c, t.fork))).filter((s): s is CommentSpec => !!s);
     const started = performance.now();
     const placed = layoutComments(specs, createMeasureText());

@@ -14,6 +14,8 @@ export interface NvComment {
   score: number;
   postedAt: string;
   nicoruCount: number;
+  /** 自分がニコったコメントなら取り消しに使う ID */
+  nicoruId: string | null;
   source: string;
   isMyPost: boolean;
 }
@@ -39,6 +41,16 @@ async function postThreads(w: WatchData): Promise<NvThread[]> {
   const json = await res.json();
   if (!res.ok) throw new NicoApiError('nvcomment threads failed', res.status, json.meta?.errorCode);
   return json.data.threads;
+}
+
+/** nvcomment のスレッドへの書き込み。Cookie は送らず、ボディは JSON の文字列（`Content-Type` なし）。 */
+export function sendToThread(w: WatchData, method: string, path: string, body: unknown): Promise<Response> {
+  return fetch(`${w.nvComment.server}/v1/threads/${path}?pc=1`, {
+    method,
+    headers: { ...FRONTEND_HEADERS, 'X-Client-Os-Type': 'others' },
+    credentials: 'omit',
+    body: JSON.stringify(body),
+  });
 }
 
 /** `threadKey` が拒否されたら watch ページを取り直して 1 回だけ再試行する。 */

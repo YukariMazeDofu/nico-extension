@@ -18,6 +18,15 @@ export const commentSettings = storage.defineItem<CommentSettings>('local:commen
   fallback: { visible: true },
 });
 
+export interface CommentListSettings {
+  /** 再生位置に合わせて一覧をスクロールする */
+  follow: boolean;
+}
+
+export const commentListSettings = storage.defineItem<CommentListSettings>('local:commentList', {
+  fallback: { follow: true },
+});
+
 export interface LayoutSettings {
   /** true なら動画の下にコントロールを常に表示し、false なら動画に重ねて操作がないと隠す */
   controlsPinned: boolean;
