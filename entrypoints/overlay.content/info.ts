@@ -1,4 +1,5 @@
 import type { VideoInfo, VideoSummary, WatchData } from '@/lib/nico/watch';
+import { type IconName, icon } from './icons';
 
 const ALLOWED_TAGS = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'FONT', 'I', 'P', 'S', 'SPAN', 'STRONG', 'U']);
 const COLOR = /^(#[0-9a-f]{3,8}|[a-z]+)$/i;
@@ -19,7 +20,12 @@ function link(href: string, text: string, className = ''): HTMLAnchorElement {
   return a;
 }
 
-const watchLink = (v: VideoSummary, label: string) => link(`https://www.nicovideo.jp/watch/${v.id}`, `${label} ${v.title}`, 'series-video');
+function watchLink(v: VideoSummary, label: string) {
+  const a = link(`https://www.nicovideo.jp/watch/${v.id}`, '', 'series-video');
+  a.title = v.title;
+  a.append(el('small', '', label), el('span', '', v.title));
+  return a;
+}
 
 /** 説明文の HTML を、許可した要素と属性（`a` の http(s) の `href`、`font` の `color`）だけで組み直す。 */
 export function sanitizeDescription(html: string): DocumentFragment {
@@ -61,9 +67,10 @@ const formatCount = (n: number) => n.toLocaleString('ja-JP');
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-function stat(label: string, value: number) {
+function stat(name: IconName, label: string, value: number) {
   const e = el('span', 'stat');
-  e.append(el('span', 'stat-label', label), formatCount(value));
+  e.title = label;
+  e.append(icon(name), formatCount(value));
   return e;
 }
 
@@ -73,18 +80,23 @@ export function renderHeader(root: HTMLElement, w: WatchData) {
   const meta = el('div', 'meta');
   meta.append(
     el('span', 'date', formatDate(info.registeredAt)),
-    stat('再生', info.count.view),
-    stat('コメント', info.count.comment),
-    stat('マイリスト', info.count.mylist),
-    stat('いいね', info.count.like),
+    stat('view', '再生', info.count.view),
+    stat('comment', 'コメント', info.count.comment),
+    stat('mylist', 'マイリスト', info.count.mylist),
+    stat('like', 'いいね', info.count.like),
   );
   const tags = el('div', 'tags');
   for (const t of info.tags) {
     const a = link(`https://www.nicovideo.jp/tag/${encodeURIComponent(t.name)}`, t.name, t.isLocked ? 'tag locked' : 'tag');
-    if (t.isLocked) a.title = 'ロックされたタグ';
+    if (t.isLocked) {
+      a.title = 'ロックされたタグ';
+      a.prepend(icon('lock'));
+    }
     tags.append(a);
   }
-  root.replaceChildren(el('h1', 'title', w.title), meta, tags);
+  const title = el('h1', 'title', w.title);
+  title.title = w.title;
+  root.replaceChildren(title, meta, tags);
 }
 
 /** 右側: 投稿者・ジャンル・シリーズ・説明文 */
@@ -92,20 +104,26 @@ export function renderPanel(root: HTMLElement, info: VideoInfo) {
   const children: Node[] = [];
   if (info.owner) {
     const owner = link(info.owner.url, '', 'owner');
-    const icon = el('img', 'owner-icon');
-    icon.src = info.owner.iconUrl;
-    icon.alt = '';
-    owner.append(icon, el('span', 'owner-name', info.owner.name));
+    const avatar = el('img', 'owner-icon');
+    avatar.src = info.owner.iconUrl;
+    avatar.alt = '';
+    const name = el('span', 'owner-name', info.owner.name);
+    name.append(el('small', '', info.owner.kind === 'channel' ? 'チャンネル' : '投稿者'));
+    owner.append(avatar, name);
     children.push(owner);
   }
-  if (info.genre) children.push(el('div', 'genre', `ジャンル: ${info.genre}`));
+  const facts = el('dl', 'facts');
+  if (info.genre) facts.append(el('dt', '', 'ジャンル'), el('dd', '', info.genre));
   if (info.series) {
-    const series = el('div', 'series');
-    series.append(link(info.series.url, `シリーズ: ${info.series.title}`, 'series-title'));
-    if (info.series.prev) series.append(watchLink(info.series.prev, '◀'));
-    if (info.series.next) series.append(watchLink(info.series.next, '▶'));
-    children.push(series);
+    const series = el('dd', 'series');
+    series.append(link(info.series.url, info.series.title, 'series-title'));
+    const nav = el('div', 'series-nav');
+    if (info.series.prev) nav.append(watchLink(info.series.prev, '前'));
+    if (info.series.next) nav.append(watchLink(info.series.next, '次'));
+    if (nav.childElementCount) series.append(nav);
+    facts.append(el('dt', '', 'シリーズ'), series);
   }
+  if (facts.childElementCount) children.push(facts);
   const description = el('div', 'description');
   description.append(sanitizeDescription(info.description));
   children.push(description);

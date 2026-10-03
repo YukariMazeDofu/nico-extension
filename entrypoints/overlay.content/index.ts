@@ -2,6 +2,8 @@ import './style.css';
 import { officialWatchUrl, watchIdFromAnchor, watchIdFromDirectPath } from '@/lib/nico/link';
 import { watchUrl } from '@/lib/nico/watch';
 import { mountPlayerUi, type PlayerUi } from './controls';
+import { icon } from './icons';
+import { mountThemeSwitch } from './theme';
 
 const LEAVE_FALLBACK_MS = 300;
 
@@ -37,7 +39,7 @@ export default defineContentScript({
     const open = async (videoId: string, href?: string) => {
       close?.();
       markVisited([watchUrl(videoId), ...(href ? [href] : [])]);
-      const ui = await createShadowRootUi<PlayerUi>(ctx, {
+      const ui = await createShadowRootUi<{ ui: PlayerUi; destroyTheme(): void }>(ctx, {
         name: 'nico-ext-overlay',
         position: 'modal',
         isolateEvents: true,
@@ -48,12 +50,13 @@ export default defineContentScript({
           backdrop.className = 'backdrop';
           const button = document.createElement('button');
           button.className = 'close';
-          button.textContent = '✕';
+          button.append(icon('close'));
           button.title = '閉じる (Esc)';
+          button.setAttribute('aria-label', '閉じる');
           button.addEventListener('click', () => close?.());
           const official = document.createElement('button');
           official.className = 'official';
-          official.textContent = '公式で開く';
+          official.append(icon('external'), '公式で開く');
           official.title = '公式プレイヤーで開く';
           official.addEventListener('click', () => {
             if (directId) location.replace(officialWatchUrl(videoId));
@@ -70,11 +73,14 @@ export default defineContentScript({
             if (directId) location.assign(watchUrl(id));
             else open(id, a.href);
           });
-          playerUi = mountPlayerUi(backdrop, videoId, { log, actions: [official, button] });
-          return playerUi;
+          const theme = mountThemeSwitch(backdrop);
+          const mounted = mountPlayerUi(backdrop, videoId, { log, actions: [theme.element, official, button] });
+          playerUi = mounted;
+          return { ui: mounted, destroyTheme: theme.destroy };
         },
         onRemove(mounted) {
-          mounted?.destroy();
+          mounted?.ui.destroy();
+          mounted?.destroyTheme();
         },
       });
       ui.mount();
