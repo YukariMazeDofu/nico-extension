@@ -56,7 +56,7 @@ function stat(name: IconName, label: string, value: number) {
   return e;
 }
 
-/** 上段: タイトル・投稿日時と各カウント・タグ */
+/** 上段: タイトル・投稿日時と各カウント（いいね！を除く）・タグ */
 export function renderHeader(root: HTMLElement, w: WatchData) {
   const { info } = w;
   const meta = el('div', 'meta');
@@ -65,7 +65,6 @@ export function renderHeader(root: HTMLElement, w: WatchData) {
     stat('view', '再生', info.count.view),
     stat('comment', 'コメント', info.count.comment),
     stat('mylist', 'マイリスト', info.count.mylist),
-    stat('like', 'いいね', info.count.like),
   );
   const tags = el('div', 'tags');
   for (const t of info.tags) {

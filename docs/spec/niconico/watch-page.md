@@ -22,7 +22,7 @@
 | `video.title` | ○ | `title` | 上段のタイトル、直接開いたときのタブのタイトル |
 | `video.description` | ○ | `info.description` | 説明文（HTML） |
 | `video.registeredAt` | ○ | `info.registeredAt` | 投稿日時 |
-| `video.count`（`view`・`comment`・`mylist`・`like`） | ○ | `info.count` | 上段の各カウント（`like` は[いいね！の欄](../extension/behavior.md#いいね未実装)） |
+| `video.count`（`view`・`comment`・`mylist`・`like`） | ○ | `info.count` | 上段の各カウント（`like` は[いいね！の欄](../extension/behavior.md#いいね)） |
 | `video.viewer.like.isLiked` | | `liked` | いいね！の状態（[like.md](like.md)）。ないときは `false` |
 | `tag.items[]`（`name`・`isLocked`） | ○ | `info.tags` | タグ |
 | `genre`（`label`・`isNotSet`） | | `info.genre` | `isNotSet` なら出さない |

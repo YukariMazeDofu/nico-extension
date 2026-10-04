@@ -14,8 +14,8 @@ export interface Panel<Id extends string> {
   tabButton(id: Id): HTMLButtonElement;
 }
 
-/** タブで中身を切り替える右パネル。最初のタブを選んだ状態で始める。 */
-export function mountPanel<Id extends string>(tabs: PanelTab<Id>[]): Panel<Id> {
+/** 上端に `top`、その下にタブで切り替える中身を置く右パネル。最初のタブを選んだ状態で始める。 */
+export function mountPanel<Id extends string>(tabs: PanelTab<Id>[], top?: HTMLElement): Panel<Id> {
   const element = el('aside', 'panel');
   const tabList = el('div', 'tabs');
   tabList.setAttribute('role', 'tablist');
@@ -39,6 +39,7 @@ export function mountPanel<Id extends string>(tabs: PanelTab<Id>[]): Panel<Id> {
     t.element.classList.add('tabpanel');
   }
   tabList.append(...tabs.flatMap((t) => (t.tool ? [t.tool] : [])));
+  if (top) element.append(top);
   element.append(tabList, ...tabs.map((t) => t.element));
   if (tabs[0]) select(tabs[0].id);
   return { element, tabButton: (id) => buttons.get(id)! };

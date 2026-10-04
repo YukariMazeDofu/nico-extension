@@ -46,6 +46,8 @@ export interface WatchData {
   watchTrackId: string;
   nicosid: string;
   viewer?: { id: number; isPremium: boolean };
+  /** 開いたときにいいね！済み */
+  liked: boolean;
   accessRightKey: string;
   videos: DomandVariant[];
   audios: DomandVariant[];
@@ -57,7 +59,13 @@ export interface WatchData {
 
 /** `server-response` の `data.response` のうち使う値 */
 interface ServerResponse {
-  video: { title: string; description: string; registeredAt: string; count: VideoInfo['count'] };
+  video: {
+    title: string;
+    description: string;
+    registeredAt: string;
+    count: VideoInfo['count'];
+    viewer?: { like?: { isLiked?: boolean } | null } | null;
+  };
   tag: { items: { name: string; isLocked: boolean }[] };
   genre?: { label: string; isNotSet: boolean } | null;
   owner?: { id: number; nickname: string; iconUrl: string } | null;
@@ -146,6 +154,7 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
     watchTrackId: r.client.watchTrackId,
     nicosid: r.client.nicosid,
     viewer: r.viewer ? { id: r.viewer.id, isPremium: r.viewer.isPremium } : undefined,
+    liked: !!r.video.viewer?.like?.isLiked,
     accessRightKey: r.media.domand.accessRightKey,
     videos: r.media.domand.videos,
     audios: r.media.domand.audios,

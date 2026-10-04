@@ -4,7 +4,7 @@
 # ///
 """拡張を読み込んだ headless Chromium で nicovideo.jp のリンククリック→オーバーレイ再生を確かめる。
 video_id を渡すとそのリンクを差し込んでクリックし、省略するとページ内の最初の動画リンクをクリックする。
-再生後にページ要素との重なり、コメントの描画と表示 ON/OFF、上段・右パネルとコントロールの配置、キーボードショートカット、ホイール操作、画質の切り替えを試し、--recover ではセグメントを一時的に 403 にして復帰を確かめる。
+再生後にページ要素との重なり、コメントの描画と表示 ON/OFF、上段・右パネル（いいね！の欄）とコントロールの配置、キーボードショートカット、ホイール操作、画質の切り替えを試し、--recover ではセグメントを一時的に 403 にして復帰を確かめる。
 --shot には再生後の画面を保存する。
 usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ext_probe.py .output/chrome-mv3 <page_url> <seconds> [video_id] [--recover] [--shot out.png]"""
 import argparse
@@ -49,11 +49,13 @@ LAYOUT = f"""() => {{ const r = {SHADOW}; const rect = (s) => r.querySelector(s)
     const stage = rect('.stage'), controls = rect('.controls');
     return {{title: r.querySelector('.title')?.textContent.slice(0, 30), tags: r.querySelectorAll('.tag').length,
       panel: r.querySelector('.panel').children.length, pinned: r.querySelector('.player').classList.contains('pinned'),
-      controlsBelowVideo: controls.top >= stage.bottom - 1, controlsOpacity: getComputedStyle(r.querySelector('.controls')).opacity}}; }}"""
+      controlsBelowVideo: controls.top >= stage.bottom - 1, controlsOpacity: getComputedStyle(r.querySelector('.controls')).opacity,
+      like: (b => b && {{disabled: b.disabled, pressed: b.getAttribute('aria-pressed'), title: b.title,
+        message: r.querySelector('.like-message').textContent}})(r.querySelector('.like-button'))}}; }}"""
 
 
 async def check_layout(page):
-    """上段・右パネルの表示、コントロールの位置と H での切り替え、右パネル上のホイールを確かめる。"""
+    """上段・右パネルといいね！の欄の表示、コントロールの位置と H での切り替え、右パネル上のホイールを確かめる。"""
     print("layout:", await page.evaluate(LAYOUT))
     await page.keyboard.press("h")
     await page.mouse.move(400, 300)
