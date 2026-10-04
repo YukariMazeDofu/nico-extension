@@ -27,6 +27,7 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | API | `lib/nico/comment.ts` | コメントの取得、nvcomment への書き込み |
 | API | `lib/nico/keys.ts` | `comment/keys/*` の鍵の使い回しと再送 |
 | API | `lib/nico/post.ts`・`nicoru.ts` | 投稿、ニコる・取り消し、それぞれの可否 |
+| API | `lib/nico/like.ts` | いいね！・取り消し・お礼メッセージの取得 |
 | API | `lib/nico/link.ts` | リンク・パスから動画 ID を取る |
 | コメント | `lib/comment/spec.ts` | コマンドの解釈 |
 | コメント | `lib/comment/layout.ts` | 配置（1920×1080 の座標系） |
@@ -43,7 +44,8 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | UI | `fit.ts` | 動画の枠を縦横比に合わせる配置 |
 | UI | `shortcuts.ts` | キーボードショートカットの表とホイール |
 | UI | `info.ts` | 上段と「動画の詳細」、説明文のサニタイズ |
-| UI | `panel.ts`・`comment-list.ts`・`settings-panel.ts`・`setting-controls.ts` | 右パネルのタブ、コメント一覧、設定 |
+| UI | `panel.ts`・`comment-list.ts`・`settings-panel.ts`・`setting-controls.ts` | 右パネル（タブの上の欄とタブ）、コメント一覧、設定 |
+| UI | `like.ts` | 右パネルのいいね！の欄（ボタンとお礼メッセージ） |
 | UI | `post.ts` | コメントの投稿欄 |
 | UI | `theme.ts` | テーマの切り替え |
 | UI | `dom.ts`・`format.ts`・`icons.ts` | 要素の生成、時刻・日時・件数の書式、アイコン |
