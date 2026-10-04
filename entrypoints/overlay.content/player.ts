@@ -1,15 +1,19 @@
 import Hls, { type Level } from 'hls.js';
 import hlsWorkerSource from 'hls.js/dist/hls.worker.js?raw';
 import { log } from '@/lib/log';
+import { NicoApiError } from '@/lib/nico/api';
 import { WatchEventTracker } from '@/lib/nico/heartbeat';
 import { WatchContext } from '@/lib/nico/session';
-import { fetchHlsContentUrl, type DomandVariant } from '@/lib/nico/watch';
+import { type DomandVariant, fetchHlsContentUrl, WATCH_API_V4 } from '@/lib/nico/watch';
 import { startPositionOf } from '@/lib/resume';
 import { type PlayerSettings, playerSettings } from '@/lib/settings';
 
 const workerPath = URL.createObjectURL(new Blob([hlsWorkerSource], { type: 'text/javascript' }));
 
 const RECOVER_INTERVAL_MS = 30_000;
+const WATCH_API_V4_MESSAGE = 'ニコニコ動画の視聴の仕組みが変わりました。拡張の更新が必要です。「公式で開く」で再生できます';
+
+const isWatchApiV4 = (e: unknown) => e instanceof NicoApiError && e.code === WATCH_API_V4;
 
 export const AUTO_LEVEL = -1;
 
@@ -114,7 +118,7 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
       if (!paused) await video.play().catch((e) => log(`play() rejected: ${e}`));
     } catch (e) {
       log(`recover failed: ${e}`);
-      hooks.onError('再生できなくなりました');
+      hooks.onError(isWatchApiV4(e) ? WATCH_API_V4_MESSAGE : '再生できなくなりました');
     }
   };
 
@@ -156,7 +160,7 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     await video.play().catch((e) => log(`play() rejected: ${e}`));
   })().catch((e) => {
     log(`load failed: ${e}`);
-    hooks.onError(`読み込めませんでした（${e.code ?? e.message}）`);
+    hooks.onError(isWatchApiV4(e) ? WATCH_API_V4_MESSAGE : `読み込めませんでした（${e.code ?? e.message}）`);
   });
 
   return {

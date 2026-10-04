@@ -1,6 +1,10 @@
+import { log } from '@/lib/log';
 import { FRONTEND_HEADERS, NicoApiError, nicoFetch } from './api';
 import type { CommentFork } from './comment';
 import { accessRightsHlsUrl, channelUrl, seriesUrl, userUrl, watchUrl } from './urls';
+
+/** watch ページが v4 の形のときの `NicoApiError` の `code` */
+export const WATCH_API_V4 = 'WATCH_API_V4';
 
 export interface DomandVariant {
   id: string;
@@ -145,6 +149,10 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
   if (!content) throw new NicoApiError('server-response not found', res.status);
   const json = JSON.parse(content);
   const r = json.data?.response;
+  if (r?.$watchV4) {
+    log('watch api v4 detected');
+    throw new NicoApiError('watch api v4', res.status, WATCH_API_V4);
+  }
   if (!res.ok || !r?.media?.domand) throw new NicoApiError('watch data unavailable', res.status, json.meta?.code);
   assertServerResponse(r, res.status);
   return {

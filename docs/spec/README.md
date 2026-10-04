@@ -8,7 +8,7 @@
 | 動作 | [extension/behavior.md](extension/behavior.md) | 起動・画面・操作・`storage.local` のキー・制約と、それぞれの確かめ方 |
 | 設計 | [extension/architecture.md](extension/architecture.md) | マニフェスト・層とモジュールの対応・データの流れ・コメントの描画 |
 | 検証 | [extension/testing.md](extension/testing.md) | 型チェック・ビルド・プローブ |
-| ニコニコの仕組み | [niconico/watch-page.md](niconico/watch-page.md) | watch ページの `server-response` のうち使う値と `WatchData` の対応、トークンの期限 |
+| ニコニコの仕組み | [niconico/watch-page.md](niconico/watch-page.md) | watch ページの `server-response` のうち使う値と `WatchData` の対応、v4 の判定、トークンの期限 |
 | ニコニコの仕組み | [niconico/domand-hls.md](niconico/domand-hls.md) | `access-rights/hls`・Cookie・鍵・セグメント・有効期限 |
 | ニコニコの仕組み | [niconico/heartbeat.md](niconico/heartbeat.md) | 視聴イベント（`eventType`・`method`・受理の判定） |
 | ニコニコの仕組み | [niconico/nvcomment.md](niconico/nvcomment.md) | コメントの取得・投稿・ニコる・鍵・エラーコード・共有 NG レベル・`voltageZone` |
@@ -108,6 +108,7 @@
 | --- | --- |
 | オーバーレイに「読み込めませんでした（server-response: data.response.… is not …）」 | [watch-page.md](niconico/watch-page.md#使う値) |
 | オーバーレイに「読み込めませんでした（FORBIDDEN）」「（NOT_FOUND）」 | [watch-page.md](niconico/watch-page.md#取得できない動画) |
+| オーバーレイに「ニコニコ動画の視聴の仕組みが変わりました。拡張の更新が必要です。…」 | [watch-page.md](niconico/watch-page.md#v4) |
 | オーバーレイに「読み込めませんでした（INVALID_PARAMETER）」など、`access-rights/hls failed` | [domand-hls.md](niconico/domand-hls.md#再生用セッション) |
 | 再生中に「再生できなくなりました」 | [domand-hls.md](niconico/domand-hls.md#エラーからの復帰) |
 | 鍵（`keys/*.key`）が 403 | [domand-hls.md](niconico/domand-hls.md#cookie-と認証) |
