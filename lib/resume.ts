@@ -21,7 +21,7 @@ let queue = Promise.resolve();
 function update(change: (records: ResumeRecords) => ResumeRecords): Promise<void> {
   queue = queue
     .then(async () => resumeRecords.setValue(change({ ...(await resumeRecords.getValue()) })))
-    .catch((e) => log(`resume write failed: ${e}`));
+    .catch((e) => log.warn(`resume write failed: ${e}`));
   return queue;
 }
 

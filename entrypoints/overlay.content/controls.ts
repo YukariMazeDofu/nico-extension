@@ -136,7 +136,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { actions
   );
   const commentForm = mountCommentForm(video, player.context, {
     notify: showOsd,
-    onPosted: () => comments.reload().catch((e) => log(`comments reload failed: ${e}`)),
+    onPosted: () => comments.reload().catch((e) => log.warn(`comments reload failed: ${e}`)),
   });
   controls.append(commentForm.element);
   const layout = el('div', 'window');
@@ -198,7 +198,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { actions
   };
 
   const act: PlayerActions = {
-    togglePlay: () => (video.paused ? video.play().catch((e) => log(`play() rejected: ${e}`)) : video.pause()),
+    togglePlay: () => (video.paused ? video.play().catch((e) => log.info(`play() rejected: ${e}`)) : video.pause()),
     seekBy(dt) {
       video.currentTime = Math.min(Math.max(video.currentTime + dt, 0), video.duration || 0);
       showOsd(`${dt > 0 ? '+' : ''}${dt}秒 (${formatTime(video.currentTime)})`);
@@ -231,7 +231,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { actions
       showOsd(pinned ? 'コントロールを常に表示' : 'コントロールを自動で隠す');
     },
     toggleFullscreen: () =>
-      document.fullscreenElement ? document.exitFullscreen() : playerBox.requestFullscreen().catch((e) => log(`fullscreen: ${e}`)),
+      document.fullscreenElement ? document.exitFullscreen() : playerBox.requestFullscreen().catch((e) => log.warn(`fullscreen: ${e}`)),
     focusCommentForm: () => commentForm.focus(),
   };
   const handleKey = shortcutHandler(playerShortcuts(video, act));

@@ -150,7 +150,7 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
   const json = JSON.parse(content);
   const r = json.data?.response;
   if (r?.$watchV4) {
-    log('watch api v4 detected');
+    log.warn('watch api v4 detected');
     throw new NicoApiError('watch api v4', res.status, WATCH_API_V4);
   }
   if (!res.ok || !r?.media?.domand) throw new NicoApiError('watch data unavailable', res.status, json.meta?.code);

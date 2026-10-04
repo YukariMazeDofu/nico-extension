@@ -59,11 +59,11 @@ export function mountLikeBox(context: Promise<WatchContext>, hooks: LikeBoxHooks
     const seq = messageSeq;
     fetchThanksMessage(id).then(
       (thanks) => {
-        log(`like: thanks message ${thanks ? 'loaded' : 'empty'}`);
+        log.debug(`like: thanks message ${thanks ? 'loaded' : 'empty'}`);
         if (seq === messageSeq) showThanks(thanks);
       },
       (e) => {
-        log(`like: thanks message failed: ${errorLog(e)}`);
+        log.warn(`like: thanks message failed: ${errorLog(e)}`);
         if (seq === messageSeq) setMessage(TEXT.failed);
       },
     );
@@ -100,9 +100,9 @@ export function mountLikeBox(context: Promise<WatchContext>, hooks: LikeBoxHooks
         count = Math.max(0, count - 1);
       }
       liked = liking;
-      log(`like: ${liking ? 'liked' : 'cancelled'}`);
+      log.info(`like: ${liking ? 'liked' : 'cancelled'}`);
     } catch (e) {
-      log(`like: ${liking ? 'like' : 'cancel'} failed: ${errorLog(e)}`);
+      log.warn(`like: ${liking ? 'like' : 'cancel'} failed: ${errorLog(e)}`);
       hooks.notify(errorText(e, liking));
     } finally {
       busy = false;
