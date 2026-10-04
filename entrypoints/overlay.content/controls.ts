@@ -11,6 +11,7 @@ import { mountLikeBox } from './like';
 import { mountPanel } from './panel';
 import { AUTO_LEVEL, createPlayer } from './player';
 import { mountCommentForm } from './post';
+import { mountResume } from './resume';
 import { mountSeekBar } from './seekbar';
 import { mountSettingsPanel } from './settings-panel';
 import { type PlayerActions, playerShortcuts, shortcutHandler, wheelHandler } from './shortcuts';
@@ -88,6 +89,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { actions
     },
     signal,
   );
+  mountResume(video, videoId, seekBar.setResume, signal);
   const commentList = mountCommentList(
     video,
     player.context,
@@ -108,7 +110,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { actions
         tool: commentList.followToggle,
         onSelect: commentList.setActive,
       },
-      { id: 'settings', label: '設定', element: mountSettingsPanel(player.context, signal) },
+      { id: 'settings', label: '設定', element: mountSettingsPanel(player.context, () => seekBar.setResume(null), signal) },
     ],
     mountLikeBox(player.context, { notify: showOsd }),
   );

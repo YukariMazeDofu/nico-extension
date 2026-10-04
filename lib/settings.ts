@@ -52,6 +52,11 @@ export type Theme = 'auto' | 'light' | 'dark';
 
 export const themeSetting = storage.defineItem<Theme>('local:theme', { fallback: 'auto' });
 
+/** 開いたときの再生の位置。'head' は先頭、'resume' は前回の再生位置 */
+export type ResumeStart = 'head' | 'resume';
+
+export const resumeStartSetting = storage.defineItem<ResumeStart>('local:resumeStart', { fallback: 'head' });
+
 export interface Setting<T> {
   getValue(): Promise<T>;
   setValue(value: T): Promise<void>;

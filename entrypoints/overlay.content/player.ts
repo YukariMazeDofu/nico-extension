@@ -4,6 +4,7 @@ import { log } from '@/lib/log';
 import { WatchEventTracker } from '@/lib/nico/heartbeat';
 import { WatchContext } from '@/lib/nico/session';
 import { fetchHlsContentUrl, type DomandVariant } from '@/lib/nico/watch';
+import { startPositionOf } from '@/lib/resume';
 import { type PlayerSettings, playerSettings } from '@/lib/settings';
 
 const workerPath = URL.createObjectURL(new Blob([hlsWorkerSource], { type: 'text/javascript' }));
@@ -51,6 +52,7 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
   let selectedLevel = AUTO_LEVEL;
   let settings: PlayerSettings | undefined;
   const context = WatchContext.load(videoId);
+  const start = startPositionOf(videoId);
 
   const save = (patch: Partial<PlayerSettings>) => {
     if (!settings) return;
@@ -150,7 +152,7 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     const url = await fetchHlsContentUrl(ctx.data);
     if (signal.aborted) return;
     log('content url acquired');
-    attach(url, -1);
+    attach(url, await start);
     await video.play().catch((e) => log(`play() rejected: ${e}`));
   })().catch((e) => {
     log(`load failed: ${e}`);

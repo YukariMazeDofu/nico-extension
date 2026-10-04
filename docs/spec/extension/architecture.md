@@ -35,12 +35,13 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | コメント | `lib/comment/raster.ts`・`webgl-renderer.ts` | ビットマップ化と WebGL2 での描画 |
 | コメント | `lib/comment/ng.ts`・`heatmap.ts` | 共有 NG レベル、盛り上がりの振り分け |
 | 共通 | `lib/settings.ts` | `storage.local` の設定と `bindSetting` |
+| 共通 | `lib/resume.ts` | 前回の再生位置の記録（読み書き、1,000 件の上限、すべて消す）と、開いたときの再生の位置 |
 | 共通 | `lib/log.ts` | `[nico-ext]` 付きのログ |
 | UI | `entrypoints/overlay.content/index.ts` | リンクのクリック・直接開いたときの起動、オーバーレイの生成と片付け、Esc、訪問済み |
 | UI | `controls.ts` | 上段・動画とコントロール・右パネルの組み立て、コントロールのバー |
 | UI | `player.ts` | hls.js・画質・エラーからの復帰・視聴イベントの送信 |
 | UI | `comments.ts`・`clock.ts` | コメント層（表示域への追従、`requestAnimationFrame`、表示 ON/OFF、共有 NG レベル） |
-| UI | `seekbar.ts`・`heatmap.ts` | シークバーと盛り上がりの帯 |
+| UI | `seekbar.ts`・`heatmap.ts`・`resume.ts` | シークバーと盛り上がりの帯、前回の再生位置の印と記録を書く時機 |
 | UI | `fit.ts` | 動画の枠を縦横比に合わせる配置 |
 | UI | `shortcuts.ts` | キーボードショートカットの表とホイール |
 | UI | `info.ts` | 上段と「動画の詳細」、説明文のサニタイズ |
@@ -58,7 +59,7 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 
 1. `index.ts` がリンクのクリック（または直接開いたパス）から動画 ID を得て、`createShadowRootUi` でオーバーレイを作る。オーバーレイごとに `AbortController` を 1 つ作る。
 1. `controls.ts` の `mountPlayerUi` が各モジュールを組み立て、`player.ts` が `WatchContext.load(videoId)`（watch ページの取得）を始める。この `Promise<WatchContext>` を各モジュールが受け取る。
-1. `player.ts`: 視聴イベントの `start` → `access-rights/hls` → hls.js で再生。
+1. `player.ts`: 視聴イベントの `start` → `access-rights/hls` → hls.js で再生。開始の位置は `local:resumeStart` と前回の再生位置の記録から決める。
 1. `comments.ts`: コメントの表示と共有 NG レベルの設定を読んだあと、`/v1/threads` を取得する。取得したスレッドを次に渡す。
     - 共有 NG レベルで絞ったスレッド → コメント一覧（`comment-list.ts`）、`toSpec` → `layoutComments` → `CommentTimeline` → WebGL の描画器。
     - 絞る前のスレッドと `voltageZone.heatmap` → シークバー（`heatmap.ts`）。
@@ -86,3 +87,4 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 - 設定は `storage.local`（WXT の `storage.defineItem`）。キーの一覧は [behavior.md](behavior.md#storagelocal-のキー)。
 - `bindSetting(setting, apply, signal)` は保存された値を `apply` に渡し、以後の変更（ほかのタブと同じタブ）にも追従する。`signal` の abort で追従をやめる。
 - `local:player`（音量・ミュート・再生速度・画質）は開いたときに読み、変えたら保存する。ほかのタブでの変更には追従しない。
+- `local:resume`（前回の再生位置）は全動画の記録を 1 つの値に持つ。開いたときに読み、書くたびに読み直して書き換える。

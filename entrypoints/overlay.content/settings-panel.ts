@@ -1,6 +1,17 @@
 import type { WatchContext } from '@/lib/nico/session';
-import { type NgScoreLevel, ngScoreSetting, type Setting, seekHeatmapGammaSetting, seekHeatmapSetting } from '@/lib/settings';
+import { clearResume, RESUME_LIMIT, resumeRecords } from '@/lib/resume';
+import {
+  bindSetting,
+  type NgScoreLevel,
+  ngScoreSetting,
+  type ResumeStart,
+  resumeStartSetting,
+  type Setting,
+  seekHeatmapGammaSetting,
+  seekHeatmapSetting,
+} from '@/lib/settings';
 import { el } from './dom';
+import { formatCount } from './format';
 import { type Choice, rangeSetting, segmented } from './setting-controls';
 
 const NG_LEVELS: Choice<NgScoreLevel>[] = [
@@ -15,6 +26,11 @@ const VISIBILITY: Choice<boolean>[] = [
   { value: false, label: '隠す' },
 ];
 
+const RESUME_STARTS: Choice<ResumeStart>[] = [
+  { value: 'head', label: '先頭から' },
+  { value: 'resume', label: '前回の位置から' },
+];
+
 const GAMMA_MIN = 1;
 const GAMMA_MAX = 4;
 const GAMMA_STEP = 0.1;
@@ -26,8 +42,33 @@ function segmentedSetting<T>(title: string, hint: string, choices: Choice<T>[], 
   return section;
 }
 
-/** 右パネルの「設定」タブ。共有 NG レベルと、シークバーの盛り上がりの表示・強調を選ぶ。 */
-export function mountSettingsPanel(context: Promise<WatchContext>, signal: AbortSignal): HTMLElement {
+/** 前回の再生位置の、開いたときの位置・件数・「すべて消す」 */
+function resumeSetting(onCleared: () => void, signal: AbortSignal): HTMLElement {
+  const section = el('section', 'setting');
+  const count = el('span', 'setting-value');
+  const clear = el('button', 'setting-button', 'すべて消す');
+  clear.type = 'button';
+  clear.addEventListener('click', () => clearResume().then(onCleared));
+  const start = el('div', 'setting-row');
+  start.append('開いたとき', segmented('segmented resume-start', '開いたとき', RESUME_STARTS, resumeStartSetting, signal));
+  const row = el('div', 'setting-row');
+  row.append(count, clear);
+  section.append(
+    el('h3', 'setting-title', '前回の再生位置'),
+    start,
+    row,
+    el(
+      'p',
+      'setting-hint',
+      `前回止めた位置をシークバーに ▲ で示します。「前回の位置から」では、開いたときにその位置から再生します。新しいものから ${formatCount(RESUME_LIMIT)} 件を残します。`,
+    ),
+  );
+  bindSetting(resumeRecords, (records) => (count.textContent = `${formatCount(Object.keys(records).length)} 件`), signal);
+  return section;
+}
+
+/** 右パネルの「設定」タブ。共有 NG レベル、シークバーの盛り上がりの表示・強調、前回の再生位置の消去。 */
+export function mountSettingsPanel(context: Promise<WatchContext>, onResumeCleared: () => void, signal: AbortSignal): HTMLElement {
   const root = el('div', 'settings');
   const ng = segmentedSetting(
     '共有 NG レベル',
@@ -50,7 +91,7 @@ export function mountSettingsPanel(context: Promise<WatchContext>, signal: Abort
     rangeSetting('強調', { min: GAMMA_MIN, max: GAMMA_MAX, step: GAMMA_STEP }, seekHeatmapGammaSetting, signal),
     el('p', 'setting-hint', '強調を上げるほど、コメントが特に多い区間だけが赤くなります。1 では値に比例します。'),
   );
-  root.append(ng, heatmap);
+  root.append(ng, heatmap, resumeSetting(onResumeCleared, signal));
   context.then(
     (ctx) => (disabled.hidden = !ctx.data.ngScoreDisabled),
     () => {},
