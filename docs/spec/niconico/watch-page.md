@@ -69,6 +69,30 @@
 - **コード**: `lib/nico/watch.ts`（`fetchWatchData`）、`entrypoints/overlay.content/player.ts`（`onError`）。
 - **確かめ方**: 読み込めない動画のリンクをページに差し込んでクリックし、`.message` の文字を読む。`ext_probe.py` に読み込めない動画を渡すと終わらない。
 
+## v4
+
+`server-response` の値が `data.response.$watchV4.data` に入る形を v4 と呼ぶ。拡張は v4 を読まない。`data.response.$watchV4` があれば v4 と判定し、[v4 の検知](../extension/behavior.md#v4-の検知)の表示を出す。
+
+v3（`data.response`）との主な違い:
+
+| v3 | v4 |
+| --- | --- |
+| `media.domand`（`accessRightKey`・`videos`・`audios`） | `media`（`accessRightKey`・`contents.videos`・`contents.audios`・`hls`）。`hls.url` が master playlist で、`hls.createdAt`・`hls.expiredAt` が付く |
+| `video.viewer.like.isLiked` | `video.isLikedByViewer` |
+| `tag.items` | `tags.items` |
+| `owner`・`channel`・`series` | ない。`POST nvapi /v4/watch/lazy/{id}`（`{actionTrackId, keyToken: lazy.authKey}`）の応答に入る |
+| `comment.threads[].isDefaultPostTarget` | `comment.threads[].isPostTarget` |
+| 視聴イベント（`access-rights/hls`、[heartbeat.md](heartbeat.md)） | `POST nvapi /v4/watch/{id}`（`{actionTrackId, heartbeat: {method, params: {eventType, …}}}`） |
+
+`comment.nvComment` と `client.watchTrackId` は v3 と同じ。
+
+未確認: 実測していない。`media.contents` の形（オブジェクトか配列か）、`hls.url` の期限切れのあとの取り直し、v4 の視聴イベントの間隔。
+
+- **確認**: 2026-10-04、他の実装のコード（[kphrx/ZenzaWatch](https://github.com/kphrx/ZenzaWatch) `feb1617` の `src/initializer.js`、[castella-cake/mintwatch](https://github.com/castella-cake/mintwatch) の `change/v4watch` ブランチ `1a1af3ea` の `types/watch/Base.ts`・`Lazy.ts`・`HeartBeat.ts`）。v4 の応答は 2026-09-30〜10-01 に返った。2026-10-04 の公式の JS バンドルには v4 のコードがない。
+- **コード**: `lib/nico/watch.ts`（`fetchWatchData`）。
+- **確かめ方**: [v4 の検知](../extension/behavior.md#v4-の検知)。
+- **壊れたとき**: 判定のキーが違うと、v4 の動画で「読み込めませんでした（…）」と出る。
+
 ## トークンの期限
 
 | トークン | 期限（取得直後の残り） | ペイロードの主なキー |

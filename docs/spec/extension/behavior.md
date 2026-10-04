@@ -35,6 +35,12 @@
 
 - **確かめ方**: `visited_probe.py`。開いた動画のリンクの文字色が `(70, 70, 70)` → `(192, 192, 192)`、開いていない動画は変わらない。`url unchanged: True`・`history unchanged: True`。
 
+### v4 の検知（未実装）
+
+watch ページの `server-response` が [v4](../niconico/watch-page.md#v4) のとき、オーバーレイに「ニコニコ動画の視聴の仕組みが変わりました。拡張の更新が必要です。「公式で開く」で再生できます」と出し、再生しない。console に `[nico-ext] watch api v4 detected` を出す。再生中にトークンを取り直したときに v4 だった場合も、同じ文を出す。
+
+- **確かめ方**: 使い捨てのスクリプトで、watch ページの応答の `server-response` を `{"meta":{"status":200},"data":{"response":{"$watchV4":{"data":{}}}}}` に差し替え、リンクを差し込んでクリックし、`.message` の文字と console を見る。差し替えないときは `ext_probe.py` が今までどおり通る。
+
 ## 画面
 
 ### オーバーレイ
