@@ -476,6 +476,25 @@ option {
   }
 }
 
+/* 前回の再生位置の印。縦棒はシークバーの高さで、▲ はシークバーの下にはみ出す。左右の位置は帯（左右 8px 内側）に合わせる */
+.seek-resume {
+  position: absolute;
+  top: 0;
+  left: calc(8px + (100% - 16px) * var(--resume, 0));
+  z-index: 1;
+  translate: -50% 0;
+
+  & svg {
+    width: 10px;
+    height: 25px;
+    fill: #fff;
+    stroke: #000;
+    stroke-width: 2;
+    paint-order: stroke;
+    overflow: visible;
+  }
+}
+
 /* コメントの投稿 */
 .post {
   display: flex;
@@ -908,6 +927,11 @@ option {
     font-size: 13px;
     font-weight: 600;
   }
+
+  & .resume-start button {
+    width: auto;
+    padding: 0 12px;
+  }
 }
 
 .setting-title {
@@ -940,6 +964,19 @@ option {
   font: 600 13px var(--font-num);
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+.setting-button {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--fill);
+  font-size: 13px;
+  font-weight: 600;
+
+  &:hover {
+    background: var(--fill-hover);
+  }
 }
 
 .setting-hint {
