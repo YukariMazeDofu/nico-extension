@@ -32,11 +32,12 @@ export function rasterize(c: PlacedComment, scale: number): Raster {
   g.lineWidth = lineWidth;
   g.strokeStyle = `rgb(${strokeRgb(c)} / ${STROKE_OPACITY})`;
   g.fillStyle = c.spec.color;
-  // フォントの ascent + descent を行の高さの中央に置く
+  // 行の帯を `(文字の大きさ − 行の高さ) / 2` から並べ、各帯の中央にフォントの ascent + descent を置く
   const m = g.measureText('あ');
+  const top = ((c.characterSize - c.lineHeight) * scale) / 2;
   const baseline = (lineHeight - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
   lines.forEach((line, i) => {
-    const y = pad + i * lineHeight + baseline;
+    const y = pad + top + i * lineHeight + baseline;
     g.strokeText(line, pad, y);
     g.fillText(line, pad, y);
   });
