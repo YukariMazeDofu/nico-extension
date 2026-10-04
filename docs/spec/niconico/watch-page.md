@@ -90,5 +90,8 @@
 | --- | --- |
 | `GET www.nicovideo.jp/api/watch/v3/{id}?actionTrackId=…`（ログイン時）・`/api/watch/v3_guest/{id}`（未ログイン） | 公式の JS バンドルにある。[yt-dlp](https://github.com/yt-dlp/yt-dlp) の `extractor/niconico.py` が `accessRightKey` などの取得に使う。拡張からの呼び出しは未検証 |
 | `nvapi /v1/playlist/{mylist,random-play,ranking/teiban,…}` | 連続再生の一覧。公式の JS バンドルにある |
+| `PUT nvapi /v2/users/me/watch/history/playback-position`（`{videoId, seconds}`） | 視聴履歴の再生位置を書く。公式は一時停止・動画の切り替え・ページを離れるときに送る。視聴イベントの `end_position_milliseconds` では書かれない |
+| `GET nvapi /v2/users/me/watch/history` | 視聴履歴（20 件ずつ、`nextCursor`）。`items[].video.playbackPosition` は書いた秒数を 100 秒単位に切り上げ、動画の長さで頭打ちにした値 |
+| `player.initialPlayback`（`server-response`） | `{type, positionSec}`。公式は `type` が `from` か、続きから再生の設定がオンのときに `positionSec` から再生する。一般会員では `type: 'resume'`・`positionSec: null` |
 
-- **確認**: 2026-10-01、公式の JS バンドル。
+- **確認**: 2026-10-01、公式の JS バンドル。視聴履歴と `initialPlayback` は 2026-10-04、`PlayerCurrentTime-*.js`・`PlayerSeekBar-*.js` と一般会員での実測。
