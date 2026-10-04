@@ -69,11 +69,11 @@ export function mountCommentForm(video: HTMLVideoElement, context: Promise<Watch
     const draft = { body: text, commands: commands.value.split(/\s+/).filter(Boolean), vposMs: Math.floor(video.currentTime * 1000) };
     try {
       const posted = await postComment(ctx.data, draft);
-      log(`comment posted: ${JSON.stringify(posted)}`);
+      log.info(`comment posted: ${JSON.stringify(posted)}`);
       body.value = '';
       hooks.onPosted();
     } catch (err) {
-      log(`comment post failed: ${err instanceof NicoApiError ? `${err.status} ${err.code}` : err}`);
+      log.warn(`comment post failed: ${err instanceof NicoApiError ? `${err.status} ${err.code}` : err}`);
       hooks.notify(errorText(err));
     } finally {
       posting = false;

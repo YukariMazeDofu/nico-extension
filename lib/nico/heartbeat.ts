@@ -127,7 +127,7 @@ export class WatchEventTracker {
     const key = this.ctx.isFresh('accessRightKey') ? this.ctx.data.accessRightKey : undefined;
     this.queue = this.queue
       .then(() => sendWatchEvent(this.watch, key, e, opts))
-      .then(() => log(`watch event ${type} accepted`))
-      .catch((err) => log(`watch event ${type} failed: ${err}`));
+      .then(() => log.debug(`watch event ${type} accepted`))
+      .catch((err) => log.warn(`watch event ${type} failed: ${err}`));
   }
 }

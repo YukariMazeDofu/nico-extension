@@ -131,12 +131,12 @@ export function mountCommentList(
         comment.nicoruCount = Math.max(0, comment.nicoruCount - 1);
       } else {
         const r = await nicoru(ctx.data, row.threadId, row.fork, comment);
-        log(`nicoru: ${JSON.stringify(r)}`);
+        log.info(`nicoru: ${JSON.stringify(r)}`);
         comment.nicoruId = r.nicoruId;
         comment.nicoruCount = r.nicoruCount;
       }
     } catch (e) {
-      log(`nicoru failed: ${e instanceof NicoApiError ? `${e.status} ${e.code}` : e}`);
+      log.warn(`nicoru failed: ${e instanceof NicoApiError ? `${e.status} ${e.code}` : e}`);
       hooks.notify(errorText(e));
     } finally {
       busy.delete(comment);

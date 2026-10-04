@@ -45,7 +45,7 @@ export function mountComments(
   try {
     renderer = new WebGlCommentRenderer(root);
   } catch (e) {
-    log(`comment renderer failed: ${e}`);
+    log.error(`comment renderer failed: ${e}`);
   }
   const now = createMediaClock(video);
   let timeline: CommentTimeline | undefined;
@@ -134,7 +134,7 @@ export function mountComments(
     const specs = shown.flatMap((t) => t.comments.map((c) => toSpec(c, t.fork))).filter((s): s is CommentSpec => !!s);
     const started = performance.now();
     const placed = layoutComments(specs, createMeasureText());
-    log(
+    log.info(
       `comments: ${threads.map((t) => `${t.fork}=${t.comments.length}`).join(' ')}, ng(${level}) hidden ${ngHidden}, ` +
         `placed ${placed.length} in ${(performance.now() - started).toFixed(0)}ms`,
     );
@@ -167,7 +167,7 @@ export function mountComments(
     ),
   ])
     .then(load)
-    .catch((e) => log(`comments failed: ${e}`));
+    .catch((e) => log.error(`comments failed: ${e}`));
 
   return {
     get visible() {

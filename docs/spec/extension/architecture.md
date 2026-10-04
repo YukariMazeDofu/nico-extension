@@ -36,7 +36,7 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | コメント | `lib/comment/ng.ts`・`heatmap.ts` | 共有 NG レベル、盛り上がりの振り分け |
 | 共通 | `lib/settings.ts` | `storage.local` の設定と `bindSetting` |
 | 共通 | `lib/resume.ts` | 前回の再生位置の記録（読み書き、1,000 件の上限、すべて消す）と、開いたときの再生の位置 |
-| 共通 | `lib/log.ts` | `[nico-ext]` 付きのログ |
+| 共通 | `lib/log.ts` | `[nico-ext]` 付きのログ（`log.debug`・`info`・`warn`・`error`） |
 | UI | `entrypoints/overlay.content/index.ts` | リンクのクリック・直接開いたときの起動、オーバーレイの生成と片付け、Esc、訪問済み |
 | UI | `controls.ts` | 上段・動画とコントロール・右パネルの組み立て、コントロールのバー |
 | UI | `player.ts` | hls.js・画質・エラーからの復帰・視聴イベントの送信 |
@@ -88,3 +88,17 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 - `bindSetting(setting, apply, signal)` は保存された値を `apply` に渡し、以後の変更（ほかのタブと同じタブ）にも追従する。`signal` の abort で追従をやめる。
 - `local:player`（音量・ミュート・再生速度・画質）は開いたときに読み、変えたら保存する。ほかのタブでの変更には追従しない。
 - `local:resume`（前回の再生位置）は全動画の記録を 1 つの値に持つ。開いたときに読み、書くたびに読み直して書き換える。
+
+## ログ
+
+`lib/log.ts` の `log.debug`・`log.info`・`log.warn`・`log.error` で、`[nico-ext]` を付けて同じ名前の `console` のメソッドに出す。表示するレベルは DevTools の console の「Default levels」で選ぶ（`debug` は Verbose。既定では出ない）。拡張に表示の設定は持たない。
+
+| レベル | 出すもの | 例 |
+| --- | --- | --- |
+| `error` | 再生・コメントの表示が止まる失敗 | `load failed`・`recover failed`・`comments failed`・`comment renderer failed` |
+| `warn` | 一部の機能の失敗、検知した変化 | 投稿・ニコる・いいね！・お礼メッセージ・視聴イベント・`resume write`・コメントの取り直し・全画面の失敗、致命的な `hls error`、`watch api v4 detected` |
+| `info` | 主な出来事 | `watch data`・`comments: …`・`access right key expired`・`session recreated`・`comment posted`・`nicoru`・`like`・`play() rejected` |
+| `debug` | 細かい経過 | `manifest parsed`・`level switched`・致命的でない `hls error`・`content url acquired`・`watch event … accepted`・`like: thanks message …` |
+
+- **コード**: `lib/log.ts` と各呼び出し。
+- **確かめ方**: プローブは `console` の種類を問わず `[nico-ext]` の行を読む（`heatmap_probe.py` は種類が `error` の行も出す）。`run_probes.sh` の前後の出力を `cmp_probes.sh` で比べ、差がないこと。

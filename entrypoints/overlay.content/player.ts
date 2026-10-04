@@ -83,16 +83,16 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     });
     hls = h;
     h.on(Hls.Events.MANIFEST_PARSED, (_, d) => {
-      log(`manifest parsed: ${d.levels.length} levels`);
+      log.debug(`manifest parsed: ${d.levels.length} levels`);
       qualities = d.levels.map((l, i) => qualityOf(l, i, ctx?.data.videos ?? [])).sort((a, b) => b.height - a.height);
       applyQuality(h);
     });
     h.on(Hls.Events.LEVEL_SWITCHED, (_, d) => {
-      log(`level switched: ${d.level}`);
+      log.debug(`level switched: ${d.level}`);
       hooks.onQualityChange();
     });
     h.on(Hls.Events.ERROR, (_, d) => {
-      log(`hls error: ${d.type} ${d.details} fatal=${d.fatal} status=${d.response?.code ?? '-'}`);
+      (d.fatal ? log.warn : log.debug)(`hls error: ${d.type} ${d.details} fatal=${d.fatal} status=${d.response?.code ?? '-'}`);
       if (!d.fatal) return;
       if (d.type === Hls.ErrorTypes.MEDIA_ERROR) h.recoverMediaError();
       else recover();
@@ -110,14 +110,14 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     const position = video.currentTime;
     const paused = video.paused;
     try {
-      if (!ctx.isFresh('accessRightKey')) log('access right key expired, refetching watch data');
+      if (!ctx.isFresh('accessRightKey')) log.info('access right key expired, refetching watch data');
       const url = await fetchHlsContentUrl(await ctx.fresh('accessRightKey'));
       if (signal.aborted) return;
-      log(`session recreated at ${position.toFixed(1)}`);
+      log.info(`session recreated at ${position.toFixed(1)}`);
       attach(url, position);
-      if (!paused) await video.play().catch((e) => log(`play() rejected: ${e}`));
+      if (!paused) await video.play().catch((e) => log.info(`play() rejected: ${e}`));
     } catch (e) {
-      log(`recover failed: ${e}`);
+      log.error(`recover failed: ${e}`);
       hooks.onError(isWatchApiV4(e) ? WATCH_API_V4_MESSAGE : '再生できなくなりました');
     }
   };
@@ -150,16 +150,16 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     video.defaultPlaybackRate = video.playbackRate = settings.playbackRate;
     ctx = await context;
     if (signal.aborted) return;
-    log(`watch data: ${ctx.data.videos.length} videos, ${ctx.data.audios.length} audios`);
+    log.info(`watch data: ${ctx.data.videos.length} videos, ${ctx.data.audios.length} audios`);
     tracker = new WatchEventTracker(ctx);
     tracker.start();
     const url = await fetchHlsContentUrl(ctx.data);
     if (signal.aborted) return;
-    log('content url acquired');
+    log.debug('content url acquired');
     attach(url, await start);
-    await video.play().catch((e) => log(`play() rejected: ${e}`));
+    await video.play().catch((e) => log.info(`play() rejected: ${e}`));
   })().catch((e) => {
-    log(`load failed: ${e}`);
+    log.error(`load failed: ${e}`);
     hooks.onError(isWatchApiV4(e) ? WATCH_API_V4_MESSAGE : `読み込めませんでした（${e.code ?? e.message}）`);
   });
 
