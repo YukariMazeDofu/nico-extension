@@ -4,27 +4,26 @@ import type { CommentFont, CommentLoc, CommentSize, CommentSpec } from './spec';
 export const STAGE_WIDTH = 1920;
 export const STAGE_HEIGHT = 1080;
 
-const SCALE = STAGE_WIDTH / 683;
-const FIXED_WIDTH = 512 * SCALE;
-const FONT_SIZE: Record<CommentSize, { default: number; resized: number }> = {
-  big: { default: 39 * SCALE, resized: 19.5 * SCALE },
-  medium: { default: 27 * SCALE, resized: 14 * SCALE },
-  small: { default: 18 * SCALE, resized: 10 * SCALE },
-};
+/** 基準の枠（高さ × 4/3）。座標系の横の中央に置く */
+const BASE_WIDTH = (STAGE_HEIGHT * 4) / 3;
+const BASE_LEFT = (STAGE_WIDTH - BASE_WIDTH) / 2;
+const BASE_RIGHT = BASE_LEFT + BASE_WIDTH;
+/** 文字の大きさ = `STAGE_HEIGHT` / 値 */
+const CHARACTER_COUNT: Record<CommentSize, number> = { big: 7.8, medium: 11.3, small: 16.6 };
+/** 行の高さの値（通常 / 改行で縮小） */
 const LINE_COUNT: Record<CommentSize, { default: number; resized: number }> = {
   big: { default: 8.4, resized: 16 },
   medium: { default: 13.1, resized: 25.4 },
   small: { default: 21, resized: 38 },
 };
 const LINE_BREAK_COUNT: Record<CommentSize, number> = { big: 3, medium: 5, small: 7 };
+/** フォントサイズ = 文字の大きさ × 値 */
+const FONT_SIZE_RATIO = 0.8;
 
-const NAKA_DRAW_PADDING = 195;
-const NAKA_DRAW_RANGE = 1530;
-const NAKA_SPEED_OFFSET = 0.95;
+/** 流れるコメントが基準の枠の右端にある時刻の、`vposMs` からの前倒し */
 const NAKA_LEAD_MS = 1000;
-const COLLISION_LEFT = 235;
-const COLLISION_RIGHT = 1685;
-const COLLISION_PADDING = 5;
+/** 流れるコメントを基準の枠の外で描く前後の時間 */
+const NAKA_MARGIN_MS = 1000;
 const PRUNE_MARGIN_MS = 5000;
 
 export const FONTS: Record<CommentFont, { family: string; weight: number }> = {
@@ -37,6 +36,8 @@ export interface PlacedComment {
   spec: CommentSpec;
   /** 0: 一般（main / easy）、1: 投稿者。レイヤーごとに当たり判定を分ける */
   layer: 0 | 1;
+  /** 文字の大きさ。フォントサイズはこの `FONT_SIZE_RATIO` 倍 */
+  characterSize: number;
   fontSize: number;
   lineHeight: number;
   width: number;
@@ -61,42 +62,52 @@ export const cssFont = (spec: CommentSpec, size: number) => {
 
 function measure(spec: CommentSpec, measureText: MeasureText) {
   const lines = spec.body.split('\n');
-  const resized = !spec.ender && lines.length >= LINE_BREAK_COUNT[spec.size];
-  const kind = resized ? 'resized' : 'default';
-  let fontSize = FONT_SIZE[spec.size][kind];
-  let lineHeight = STAGE_HEIGHT / LINE_COUNT[spec.size][kind];
-  const font = cssFont(spec, fontSize);
+  const count = LINE_COUNT[spec.size];
+  let characterSize = STAGE_HEIGHT / CHARACTER_COUNT[spec.size];
+  let lineHeight = (STAGE_HEIGHT - characterSize) / (count.default - 1);
+  if (!spec.ender && lines.length >= LINE_BREAK_COUNT[spec.size]) {
+    const resized = (STAGE_HEIGHT - (characterSize * count.default) / count.resized) / (count.resized - 1);
+    characterSize *= resized / lineHeight;
+    lineHeight = resized;
+  }
+  const font = cssFont(spec, characterSize * FONT_SIZE_RATIO);
   let width = Math.max(...lines.map((l) => measureText(l, font)));
   if (spec.loc !== 'naka' && !spec.ender) {
-    const limit = spec.full ? STAGE_WIDTH : FIXED_WIDTH;
+    const limit = spec.full ? STAGE_WIDTH : BASE_WIDTH;
     if (width > limit) {
       const k = limit / width;
-      fontSize *= k;
+      characterSize *= k;
       lineHeight *= k;
       width = limit;
     }
   }
-  return { fontSize, lineHeight, width, height: lineHeight * lines.length };
+  return {
+    characterSize,
+    fontSize: characterSize * FONT_SIZE_RATIO,
+    lineHeight,
+    width,
+    height: lineHeight * (lines.length - 1) + characterSize,
+  };
 }
 
 function timing(spec: CommentSpec, width: number) {
   if (spec.loc !== 'naka') {
     return { startMs: spec.vposMs, endMs: spec.vposMs + spec.durationMs, x0: (STAGE_WIDTH - width) / 2, speed: 0 };
   }
-  const speed = (NAKA_DRAW_RANGE + width * NAKA_SPEED_OFFSET) / (spec.durationMs + NAKA_LEAD_MS);
-  const enterMs = spec.vposMs - NAKA_LEAD_MS;
+  const speed = (BASE_WIDTH + width) / (spec.durationMs + NAKA_LEAD_MS);
   return {
-    startMs: enterMs - NAKA_DRAW_PADDING / speed,
-    endMs: enterMs + (NAKA_DRAW_PADDING + NAKA_DRAW_RANGE + width) / speed,
-    x0: STAGE_WIDTH,
+    startMs: spec.vposMs - NAKA_LEAD_MS - NAKA_MARGIN_MS,
+    endMs: spec.vposMs + spec.durationMs + NAKA_MARGIN_MS,
+    x0: BASE_RIGHT + speed * NAKA_MARGIN_MS,
     speed,
   };
 }
 
 function nakaConflicts(a: PlacedComment, b: PlacedComment): boolean {
+  // 基準の枠に掛かっている時間
   const window = (c: PlacedComment): [number, number] => [
-    c.startMs + (STAGE_WIDTH - COLLISION_RIGHT) / c.speed,
-    c.startMs + (STAGE_WIDTH + c.width + COLLISION_PADDING - COLLISION_LEFT) / c.speed,
+    c.startMs + (c.x0 - BASE_RIGHT) / c.speed,
+    c.startMs + (c.x0 + c.width - BASE_LEFT) / c.speed,
   ];
   const [aIn, aOut] = window(a);
   const [bIn, bOut] = window(b);
@@ -104,7 +115,7 @@ function nakaConflicts(a: PlacedComment, b: PlacedComment): boolean {
   const t2 = Math.min(aOut, bOut);
   if (t1 > t2) return false;
   // 位置の差は時刻に対して線形。区間の両端で前後関係が同じなら、区間内でも重ならない
-  const behind = (p: PlacedComment, q: PlacedComment, t: number) => xAt(p, t) - (xAt(q, t) + q.width + COLLISION_PADDING) >= 0;
+  const behind = (p: PlacedComment, q: PlacedComment, t: number) => xAt(p, t) - (xAt(q, t) + q.width) >= 0;
   return !((behind(b, a, t1) && behind(b, a, t2)) || (behind(a, b, t1) && behind(a, b, t2)));
 }
 

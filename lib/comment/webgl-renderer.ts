@@ -1,6 +1,6 @@
-import { type PlacedComment, STAGE_HEIGHT, STAGE_WIDTH, xAt } from './layout';
+import { type PlacedComment, xAt } from './layout';
 import { commentOpacity, rasterize } from './raster';
-import type { CommentRenderer } from './timeline';
+import type { CommentRenderer, RenderView } from './timeline';
 
 const VERTEX = `#version 300 es
 uniform vec4 u_rect;
@@ -44,6 +44,9 @@ export class WebGlCommentRenderer implements CommentRenderer {
   private readonly uOpacity: WebGLUniformLocation;
   /** 配置の座標系から canvas の px への倍率 */
   private scale = 1;
+  /** canvas の左上から見た、配置の座標系の原点の位置（canvas の px） */
+  private originX = 0;
+  private originY = 0;
   /** 投稿者のレイヤーを上に重ねる。各レイヤーの中は表示した順 */
   private readonly layers: [Map<PlacedComment, Entry>, Map<PlacedComment, Entry>] = [new Map(), new Map()];
 
@@ -67,10 +70,12 @@ export class WebGlCommentRenderer implements CommentRenderer {
     gl.clearColor(0, 0, 0, 0);
   }
 
-  setScale(scale: number) {
-    this.scale = scale * devicePixelRatio;
-    const width = Math.round(STAGE_WIDTH * this.scale);
-    const height = Math.round(STAGE_HEIGHT * this.scale);
+  setView(view: RenderView) {
+    this.scale = view.scale * devicePixelRatio;
+    this.originX = view.x * devicePixelRatio;
+    this.originY = view.y * devicePixelRatio;
+    const width = Math.round(view.width * devicePixelRatio);
+    const height = Math.round(view.height * devicePixelRatio);
     if (this.canvas.width === width && this.canvas.height === height) return;
     this.canvas.width = width;
     this.canvas.height = height;
@@ -107,7 +112,7 @@ export class WebGlCommentRenderer implements CommentRenderer {
       for (const [c, e] of layer) {
         if (nowMs < c.startMs || nowMs >= c.endMs) continue;
         gl.bindTexture(gl.TEXTURE_2D, e.texture);
-        gl.uniform4f(this.uRect, xAt(c, nowMs) * k + e.offsetX, Math.round(c.y * k + e.offsetY), e.width, e.height);
+        gl.uniform4f(this.uRect, this.originX + xAt(c, nowMs) * k + e.offsetX, Math.round(this.originY + c.y * k + e.offsetY), e.width, e.height);
         gl.uniform1f(this.uOpacity, commentOpacity(c));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }

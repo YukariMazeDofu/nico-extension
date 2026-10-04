@@ -40,7 +40,7 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | UI | `entrypoints/overlay.content/index.ts` | リンクのクリック・直接開いたときの起動、オーバーレイの生成と片付け、Esc、訪問済み |
 | UI | `controls.ts` | 上段・動画とコントロール・右パネルの組み立て、コントロールのバー |
 | UI | `player.ts` | hls.js・画質・エラーからの復帰・視聴イベントの送信 |
-| UI | `comments.ts`・`clock.ts` | コメント層（表示域への追従、`requestAnimationFrame`、表示 ON/OFF、共有 NG レベル） |
+| UI | `comments.ts`・`clock.ts` | コメント層（動画の枠への追従、`requestAnimationFrame`、表示 ON/OFF、共有 NG レベル） |
 | UI | `seekbar.ts`・`heatmap.ts`・`resume.ts` | シークバーと盛り上がりの帯、前回の再生位置の印と記録を書く時機 |
 | UI | `fit.ts` | 動画の枠を縦横比に合わせる配置 |
 | UI | `shortcuts.ts` | キーボードショートカットの表とホイール |
@@ -53,7 +53,7 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | UI | `style.css` | オーバーレイの CSS |
 
 - API 層は DOM の UI に依存しない（`watch.ts` の `DOMParser` を除く）。コメント層の `spec.ts`・`layout.ts`・`ng.ts`・`heatmap.ts` は純粋な関数。
-- 描画器は `CommentRenderer`（`setScale`・`show`・`hide`・`frame`・`clear`・`destroy`）を実装すれば差し替えられる。
+- 描画器は `CommentRenderer`（`setView`・`show`・`hide`・`frame`・`clear`・`destroy`）を実装すれば差し替えられる。
 
 ## データの流れ
 
@@ -71,10 +71,11 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 コマンドの解釈（`spec.ts`）→ 配置（`layout.ts`、[comment-render.md](../niconico/comment-render.md)）→ 描画の 3 段で流す。
 
 - コメント 1 件を、表示の開始時に 1 回だけ `OffscreenCanvas` の 2D でビットマップにする（縁取り → 塗り）。毎フレームは位置だけを計算する。
-    - 縁取りは黒（文字が黒なら白）の不透明度 0.4、文字の外側に 2.8。フォントの ascent + descent を行の高さの中央に置く。
+    - 縁取りは黒（文字が黒なら白）の不透明度 0.4、文字の外側に 2.8。
+    - 行の帯（高さは行の高さ）を、上から `(文字の大きさ − 行の高さ) / 2 + 行の番号 × 行の高さ` の位置に並べ、各帯の中央にフォントの ascent + descent を置く。
     - 自分の投稿（`isMyPost`）は、配置の矩形の外側を黄色（`#FFFF00`、幅 2）の枠で囲む。
 - WebGL2 で重ねる。コメント 1 件につき 1 テクスチャ・1 draw call、頂点バッファは使わず `gl_VertexID` で矩形を作る。premultiplied alpha で重ね、投稿者のレイヤーを上にする。
-- canvas は表示域（動画の枠の中で最大の 16:9）の `devicePixelRatio` 倍の解像度にする。大きさが変わったら並べ直す。
+- canvas は動画の枠（`.stage`）に重ね、その `devicePixelRatio` 倍の解像度にする。配置の座標系は、`.stage` を内側に含む最小の 16:9 の矩形に対応させ、canvas の外に出た部分は描かない。大きさが変わったら並べ直す。
 - 表示の 500ms 前に出し、表示の終わりで捨てる。シーク・表示の切り替え・大きさの変更では、表示中のものをすべて捨てて並べ直す。
 
 時刻は平滑化した動画の時刻を使う。実時間 × 再生速度で進め、`currentTime` との差を 1 フレームあたり 5% ずつ詰める。250ms を超えて離れたら `currentTime` に合わせ直し、停止中・シーク中は `currentTime` をそのまま使う。

@@ -1,9 +1,20 @@
 import type { PlacedComment } from './layout';
 
+/** 描画先の大きさと、配置の座標系の当て方（CSS px） */
+export interface RenderView {
+  /** 描画先の大きさ */
+  width: number;
+  height: number;
+  /** 配置の座標系から描画先の px への倍率 */
+  scale: number;
+  /** 描画先の左上から見た、配置の座標系の原点の位置 */
+  x: number;
+  y: number;
+}
+
 /** 描画器。座標は配置の座標系で渡す。 */
 export interface CommentRenderer {
-  /** 配置の座標系から描画先の px への倍率 */
-  setScale(scale: number): void;
+  setView(view: RenderView): void;
   show(c: PlacedComment): void;
   hide(c: PlacedComment): void;
   /** 動画の時刻で描き直す */

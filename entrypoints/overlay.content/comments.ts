@@ -33,7 +33,7 @@ function createMeasureText(): MeasureText {
   };
 }
 
-/** `root` を動画の表示域（16:9）に合わせ、その上にコメントを流す。 */
+/** `root`（動画の枠に重ねた要素）にコメントを流す。配置の座標系は、動画の枠を内側に含む最小の 16:9 に当てる。 */
 export function mountComments(
   root: HTMLElement,
   video: HTMLVideoElement,
@@ -79,15 +79,16 @@ export function mountComments(
   const resize = new ResizeObserver(() => {
     const stage = root.parentElement;
     if (!stage) return;
-    const width = Math.min(stage.clientWidth, (stage.clientHeight * STAGE_WIDTH) / STAGE_HEIGHT);
-    const height = (width * STAGE_HEIGHT) / STAGE_WIDTH;
-    Object.assign(root.style, {
-      width: `${width}px`,
-      height: `${height}px`,
-      left: `${(stage.clientWidth - width) / 2}px`,
-      top: `${(stage.clientHeight - height) / 2}px`,
+    const { clientWidth: width, clientHeight: height } = stage;
+    const stageWidth = Math.max(width, (height * STAGE_WIDTH) / STAGE_HEIGHT);
+    const stageHeight = (stageWidth * STAGE_HEIGHT) / STAGE_WIDTH;
+    renderer?.setView({
+      width,
+      height,
+      scale: stageWidth / STAGE_WIDTH,
+      x: (width - stageWidth) / 2,
+      y: (height - stageHeight) / 2,
     });
-    renderer?.setScale(width / STAGE_WIDTH);
     reseek();
   });
   if (root.parentElement) resize.observe(root.parentElement);
