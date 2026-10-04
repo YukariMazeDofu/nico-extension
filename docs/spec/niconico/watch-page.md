@@ -22,7 +22,8 @@
 | `video.title` | ○ | `title` | 上段のタイトル、直接開いたときのタブのタイトル |
 | `video.description` | ○ | `info.description` | 説明文（HTML） |
 | `video.registeredAt` | ○ | `info.registeredAt` | 投稿日時 |
-| `video.count`（`view`・`comment`・`mylist`・`like`） | ○ | `info.count` | 上段の各カウント |
+| `video.count`（`view`・`comment`・`mylist`・`like`） | ○ | `info.count` | 上段の各カウント（`like` は[いいね！の欄](../extension/behavior.md#いいね)） |
+| `video.viewer.like.isLiked` | | `liked` | いいね！の状態（[like.md](like.md)）。ないときは `false` |
 | `tag.items[]`（`name`・`isLocked`） | ○ | `info.tags` | タグ |
 | `genre`（`label`・`isNotSet`） | | `info.genre` | `isNotSet` なら出さない |
 | `owner`（`id`・`nickname`・`iconUrl`） | | `info.owner`（`kind: 'user'`） | 投稿者 |
@@ -48,7 +49,7 @@
 | `isThreadkeyRequired` | 同名 | チャンネル・コミュニティの動画のスレッド。`184` を付けると投稿できない |
 | `postkeyStatus` | 同名 | `0` 通常、`4` 投稿できない、`5` 公式は投稿もニコるも送らない |
 
-- **確認**: 2026-10-03、`sm9`・`sm46871555`・`sm27201969`、`server-response`。`comment.threads` の意味は `PlayerSeekBar-*.js`。
+- **確認**: 2026-10-03、`sm9`・`sm46871555`・`sm27201969`、`server-response`。`comment.threads` の意味は `PlayerSeekBar-*.js`。`video.viewer.like.isLiked` は 2026-10-04、`PlayerCurrentTime-*.js`。
 - **コード**: `lib/nico/watch.ts`（`ServerResponse`・`REQUIRED_PATHS`・`videoInfoOf`）。
 - **確かめ方**: `ext_probe.py`（再生とコメント）、`layout_probe.py`（上段とパネル）、`post_probe.py`（投稿欄の状態）。必須のパスの検査は、存在しないパスを `REQUIRED_PATHS` に一時的に足したビルドで、オーバーレイにそのパスが出ることを見る。
 - **壊れたとき**: 必須のパスが変わると「読み込めませんでした（server-response: data.response.… is not …）」。任意のパスが変わると、上段・右パネルの項目が出なくなる。

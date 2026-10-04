@@ -7,6 +7,7 @@ import { el, iconButton, setIcon } from './dom';
 import { mountFit } from './fit';
 import { formatCount, formatTime } from './format';
 import { renderHeader, renderPanel } from './info';
+import { mountLikeBox } from './like';
 import { mountPanel } from './panel';
 import { AUTO_LEVEL, createPlayer } from './player';
 import { mountCommentForm } from './post';
@@ -97,17 +98,20 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { actions
     signal,
   );
   const details = el('div', 'details');
-  const panel = mountPanel([
-    { id: 'details', label: '動画の詳細', element: details },
-    {
-      id: 'comments',
-      label: 'コメント',
-      element: commentList.element,
-      tool: commentList.followToggle,
-      onSelect: commentList.setActive,
-    },
-    { id: 'settings', label: '設定', element: mountSettingsPanel(player.context, signal) },
-  ]);
+  const panel = mountPanel(
+    [
+      { id: 'details', label: '動画の詳細', element: details },
+      {
+        id: 'comments',
+        label: 'コメント',
+        element: commentList.element,
+        tool: commentList.followToggle,
+        onSelect: commentList.setActive,
+      },
+      { id: 'settings', label: '設定', element: mountSettingsPanel(player.context, signal) },
+    ],
+    mountLikeBox(player.context, { notify: showOsd }),
+  );
   const comments = mountComments(
     commentRoot,
     video,

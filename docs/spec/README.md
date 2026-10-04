@@ -13,6 +13,7 @@
 | ニコニコの仕組み | [niconico/heartbeat.md](niconico/heartbeat.md) | 視聴イベント（`eventType`・`method`・受理の判定） |
 | ニコニコの仕組み | [niconico/nvcomment.md](niconico/nvcomment.md) | コメントの取得・投稿・ニコる・鍵・エラーコード・共有 NG レベル・`voltageZone` |
 | ニコニコの仕組み | [niconico/comment-render.md](niconico/comment-render.md) | コマンド・配置の基準値・ニコスクリプト |
+| ニコニコの仕組み | [niconico/like.md](niconico/like.md) | いいね！・取り消しと開いたときの状態、お礼メッセージ |
 | ニコニコの仕組み | [niconico/web-ui.md](niconico/web-ui.md) | 公式の配色のトークン・訪問済み（`:visited`）の見た目 |
 
 `niconico/` には、実測と公式の JS バンドルで確かめた事実と、拡張がそれをどう使うかを書く。各節の末尾には次を書く。
@@ -54,7 +55,7 @@
 | `accessRightKey` | `access-rights/hls` に送る JWT。約 10 分で切れる |
 | `threadKey` | コメントの取得に送る JWT。約 8 分で切れる |
 | nvcomment | コメントのサーバー（`public.nvcomment.nicovideo.jp`） |
-| nvapi | `nvapi.nicovideo.jp`。`access-rights/hls`・コメントの鍵・ニコるの取り消しの API |
+| nvapi | `nvapi.nicovideo.jp`。`access-rights/hls`・コメントの鍵・ニコるの取り消し・いいね！の API |
 | fork | コメントのスレッドの種類。`owner`（投稿者コメント）・`main`（通常）・`easy`（かんたんコメント） |
 | `vposMs` | コメントの動画上の時刻（ミリ秒） |
 | 視聴イベント | `access-rights/hls` に送るハートビート（`start`・`play`・`impression`・`end`） |
@@ -79,7 +80,7 @@
 | 探すもの | ファイル |
 | --- | --- |
 | コメントの取得・投稿・ニコる・共有 NG レベル・ニコスクリプト・`voltageZone` の表示 | `PlayerSeekBar-*.js` |
-| nvapi のクライアント（`comment/keys/*`・ニコるの取り消し） | `enum-*.js` |
+| nvapi のクライアント（`comment/keys/*`・ニコるの取り消し・いいね！） | `enum-*.js` |
 | 視聴イベント | `PlayerVolumeBar-*.js`・`PlayerCurrentTime-*.js` |
 | 配色（`--colors-*`） | `root-*.css` |
 
@@ -98,6 +99,7 @@
 1. 投稿のチャレンジ（Cloudflare Turnstile）が求められる条件。
 1. 年齢制限・チャンネル限定・プレミアム限定の動画の `server-response` と `access-rights/hls` の応答。
 1. 自分の投稿をニコれるか。
+1. いいね！していない動画で、お礼メッセージの取得（`GET /v1/users/me/likes/items`）が何を返すか。
 1. コメント描画に関するドワンゴの特許の扱い。[niconicomments](https://github.com/xpadev-net/niconicomments) の README に、抵触しうる旨の注意書きがある。
 
 ## 症状から節への逆引き
@@ -116,6 +118,8 @@
 | 投稿で「投稿に失敗しました (…)」 | [nvcomment.md](niconico/nvcomment.md#投稿) |
 | 投稿で「確認が必要です。公式で開いて投稿してください」 | [nvcomment.md](niconico/nvcomment.md#チャレンジ) |
 | ニコるで「ニコるに失敗しました (…)」 | [nvcomment.md](niconico/nvcomment.md#ニコる) |
+| OSD に「「いいね！」に失敗しました (…)」、いいね！の状態が公式と違う | [like.md](niconico/like.md#送る) |
+| 「お礼メッセージを読み込めませんでした」 | [like.md](niconico/like.md#お礼メッセージ) |
 | 共有 NG レベルで隠れる件数が公式と違う | [nvcomment.md](niconico/nvcomment.md#共有-ng-レベル) |
 | シークバーの帯に色が付かない | [nvcomment.md](niconico/nvcomment.md#voltagezone) |
 | 配色が公式と合わない | [web-ui.md](niconico/web-ui.md#配色) |
