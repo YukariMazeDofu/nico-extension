@@ -163,6 +163,7 @@ svg {
   line-height: 1.4;
   white-space: nowrap;
   text-overflow: ellipsis;
+  cursor: pointer;
 }
 
 .meta {
