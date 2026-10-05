@@ -44,7 +44,7 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | UI | `seekbar.ts`・`heatmap.ts`・`resume.ts` | シークバーと盛り上がりの帯、前回の再生位置の印と記録を書く時機 |
 | UI | `fit.ts` | 動画の枠を縦横比に合わせる配置 |
 | UI | `shortcuts.ts` | キーボードショートカットの表とホイール |
-| UI | `info.ts` | 上段と「動画の詳細」、説明文のサニタイズ |
+| UI | `info.ts` | 上段と「動画の詳細」、説明文のサニタイズと再生位置のボタン |
 | UI | `panel.ts`・`comment-list.ts`・`settings-panel.ts`・`setting-controls.ts` | 右パネル（タブの上の欄とタブ）、コメント一覧、設定 |
 | UI | `like.ts` | 右パネルのいいね！の欄（ボタンとお礼メッセージ） |
 | UI | `post.ts` | コメントの投稿欄 |

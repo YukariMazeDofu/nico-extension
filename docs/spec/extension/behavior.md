@@ -112,7 +112,7 @@ watch ページの `server-response` が [v4](../niconico/watch-page.md#v4) の�
 | コメント（件数） | コメント一覧。タブの右端に「自動スクロール」 |
 | 設定 | 共有 NG レベル（無・弱・中・強）、シークバーの盛り上がり（表示・隠す、強調）、[前回の再生位置](#前回の再生位置)（開いたときの位置、件数、すべて消す） |
 
-- 説明文の HTML は `a`・`b`・`br`・`div`・`em`・`font`・`i`・`p`・`s`・`span`・`strong`・`u` だけで組み直す。属性は `a` の http(s) の `href` と `font` の `color` だけを移す。
+- 説明文の HTML は `a`・`b`・`br`・`div`・`em`・`font`・`i`・`p`・`s`・`span`・`strong`・`u` だけで組み直す。属性は `a` の http(s) の `href` と `font` の `color` だけを移す。`a.seekTime` は[説明文の再生位置](#説明文の再生位置未実装)のボタンにする。
 - コメント一覧
     - owner・main・easy を `vposMs` 順（同じなら `no` 順）に 1 行ずつ並べる。時刻のクリックでその位置へ移る。
     - 再生位置以前の最後の行に印を付け、一覧の下端に合わせてスクロールする。マウスが一覧の上にある間と「自動スクロール」がオフのときはスクロールしない。
@@ -122,6 +122,16 @@ watch ページの `server-response` が [v4](../niconico/watch-page.md#v4) の�
 - パネル上のホイールはスクロールに使い、音量を変えない。
 
 - **確かめ方**: `list_probe.py`（一覧の件数・並び・追従・時刻のクリック・ホバー中の停止・自動スクロールのオフと復元・未ログインでニコるが無効・開いたときは「動画の詳細」）、`ng_probe.py`（レベルごとの件数が `ok`）、`ext_probe.py` の `wheel on panel keeps volume: True`。説明文の表示、ニコる・取り消しは実機の Chromeで見る。
+
+### 説明文の再生位置（未実装）
+
+説明文の再生位置（[`a.seekTime`](../niconico/watch-page.md#説明文の再生位置)）を、同じ文字のボタンにする。
+
+- `data-seektime` が `m:ss`・`h:mm:ss` の形なら、押すと `currentTime` をその秒数にする。再生・一時停止の状態は変えない。
+- `data-seektime` が読めない `a.seekTime` は文字だけにする。
+- ボタンはリンクと同じ色で、`title` は「この位置へ移動」。
+
+- **確かめ方**: `description_probe.py`（ボタンの数と秒数が `data-seektime` と一致、`href` が `#` のリンクが残らない、押すと `t` がその秒数で一時停止のまま、再生中に押すと再生が続く）。見た目は実機の Chrome で見る。
 
 ### いいね
 

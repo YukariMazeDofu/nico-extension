@@ -25,6 +25,7 @@ mise exec -- pnpm build     # 出力は .output/chrome-mv3
 | `ng_probe.py` | `<動画 ID> [--shot out.png]`（`sm9`） | 共有 NG レベルごとの件数（`score` から数えた件数と一覧・タブの `title`・流すコメント）、復元 |
 | `heatmap_probe.py` | `<動画 ID> [--shot out.png]`（`sm9`） | 帯の色と `voltageZone` の対応、帯の太さ、表示・隠す、強調のスライダー、復元 |
 | `resume_probe.py` | `<動画 ID>`（`sm9`） | 前回の再生位置の印・先頭からの再生・印のクリック・3 秒未満で書かない・`ended` で消す・1,000 件の上限・すべて消す・前回の位置から再生する設定 |
+| `description_probe.py` | `<動画 ID>`（`sm46878133`） | 説明文の再生位置のボタンの数と秒数、押したときの移動と再生・一時停止の状態 |
 
 1 本だけ流すとき:
 
@@ -38,7 +39,7 @@ PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ext_probe.py .output/chrome-mv3 ht
 
 ## 変更の前後で比べる
 
-1. 変更前の main をビルドし、`PLAYWRIGHT_BROWSERS_PATH=<dir> sh scripts/run_probes.sh <基準の出力先>` を流す（9 本を同時に、約 5 分）。各プローブの出力は `<出力先>/<名前>.txt`、最後の行が `exit {終了コード}`。
+1. 変更前の main をビルドし、`PLAYWRIGHT_BROWSERS_PATH=<dir> sh scripts/run_probes.sh <基準の出力先>` を流す（10 本を同時に、約 5 分）。各プローブの出力は `<出力先>/<名前>.txt`、最後の行が `exit {終了コード}`。
 1. 変更後にビルドして `run_probes.sh <変更後の出力先>` を流す。
 1. `sh scripts/cmp_probes.sh <基準> <変更後>` で差を見る。時刻・動画 ID・タイトル・処理時間を伏せて比べ、最後に視聴イベントとコメントの取得の件数を並べる。
 1. 差が期待どおりの変更だけなら一致とみなす。
