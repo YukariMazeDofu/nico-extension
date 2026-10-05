@@ -1,12 +1,12 @@
 #!/bin/sh
 # プローブを同時に流し、各プローブの出力を <outdir>/<name>.txt に保存する。拡張は .output/chrome-mv3 のビルドを使う。
-# usage: [PLAYWRIGHT_BROWSERS_PATH=<dir>] sh scripts/run_probes.sh <outdir> [ext direct visited layout post list ng heatmap resume]
+# usage: [PLAYWRIGHT_BROWSERS_PATH=<dir>] sh scripts/run_probes.sh <outdir> [ext direct visited layout post list ng heatmap resume description]
 OUT=$1
 shift
 mkdir -p "$OUT" && OUT=$(cd "$OUT" && pwd) || exit 1
 cd "$(dirname "$0")/.." || exit 1
 E=.output/chrome-mv3
-PROBES=${*:-"ext direct visited layout post list ng heatmap resume"}
+PROBES=${*:-"ext direct visited layout post list ng heatmap resume description"}
 
 run() {
   name=$1
@@ -26,6 +26,7 @@ for p in $PROBES; do
     ng) run ng scripts/ng_probe.py $E sm9 ;;
     heatmap) run heatmap scripts/heatmap_probe.py $E sm9 ;;
     resume) run resume scripts/resume_probe.py $E sm9 ;;
+    description) run description scripts/description_probe.py $E sm46878133 ;;
   esac &
 done
 wait

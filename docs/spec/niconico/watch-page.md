@@ -67,7 +67,7 @@
 
 - **確認**: 2026-10-05、`sm46878133`、未ログイン。
 - **コード**: `entrypoints/overlay.content/info.ts`（`sanitizeDescription`）。
-- **確かめ方**: [説明文の再生位置](../extension/behavior.md#説明文の再生位置未実装)。
+- **確かめ方**: [説明文の再生位置](../extension/behavior.md#説明文の再生位置)。
 - **壊れたとき**: 説明文の再生位置がボタンにならず、文字か新しいタブで開くリンクになる。
 
 ## 取得できない動画

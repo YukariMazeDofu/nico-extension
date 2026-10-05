@@ -6,6 +6,22 @@ import { type IconName, icon } from './icons';
 
 const ALLOWED_TAGS = new Set(['A', 'B', 'BR', 'DIV', 'EM', 'FONT', 'I', 'P', 'S', 'SPAN', 'STRONG', 'U']);
 const COLOR = /^(#[0-9a-f]{3,8}|[a-z]+)$/i;
+const SEEK_TIME = /^(?:(\d+):)?(\d+):(\d{2})$/;
+
+/** `m:ss`・`h:mm:ss` を秒にする。形が違えば `undefined`。 */
+function parseSeekTime(text: string): number | undefined {
+  const m = SEEK_TIME.exec(text);
+  if (!m) return undefined;
+  return Number(m[1] ?? 0) * 3600 + Number(m[2]) * 60 + Number(m[3]);
+}
+
+function seekTimeButton(seconds: number) {
+  const b = el('button', 'seek-time');
+  b.type = 'button';
+  b.title = 'この位置へ移動';
+  b.dataset.seconds = String(seconds);
+  return b;
+}
 
 function watchLink(v: VideoSummary, label: string) {
   const a = link(watchUrl(v.id), '', 'series-video');
@@ -14,7 +30,10 @@ function watchLink(v: VideoSummary, label: string) {
   return a;
 }
 
-/** 説明文の HTML を、許可した要素と属性（`a` の http(s) の `href`、`font` の `color`）だけで組み直す。 */
+/**
+ * 説明文の HTML を、許可した要素と属性（`a` の http(s) の `href`、`font` の `color`）だけで組み直す。
+ * `a.seekTime` は `data-seektime` の秒数を `data-seconds` に持つ `button.seek-time` にする。
+ */
 export function sanitizeDescription(html: string): DocumentFragment {
   const src = new DOMParser().parseFromString(html, 'text/html').body;
   const copy = (from: Node, to: Node) => {
@@ -27,7 +46,14 @@ export function sanitizeDescription(html: string): DocumentFragment {
           continue;
         }
         let e: HTMLElement;
-        if (n.tagName === 'A') {
+        if (n.tagName === 'A' && n.classList.contains('seekTime')) {
+          const seconds = parseSeekTime(n.getAttribute('data-seektime') ?? '');
+          if (seconds === undefined) {
+            copy(n, to);
+            continue;
+          }
+          e = seekTimeButton(seconds);
+        } else if (n.tagName === 'A') {
           const href = URL.parse(n.getAttribute('href') ?? '', ORIGIN);
           if (!href || !/^https?:$/.test(href.protocol)) {
             copy(n, to);
@@ -80,8 +106,8 @@ export function renderHeader(root: HTMLElement, w: WatchData) {
   root.replaceChildren(title, meta, tags);
 }
 
-/** 右側: 投稿者・ジャンル・シリーズ・説明文 */
-export function renderPanel(root: HTMLElement, info: VideoInfo) {
+/** 右側: 投稿者・ジャンル・シリーズ・説明文。説明文の再生位置を押すと `seekTo` を呼ぶ。 */
+export function renderPanel(root: HTMLElement, info: VideoInfo, seekTo: (seconds: number) => void) {
   const children: Node[] = [];
   if (info.owner) {
     const owner = link(info.owner.url, '', 'owner');
@@ -107,6 +133,10 @@ export function renderPanel(root: HTMLElement, info: VideoInfo) {
   if (facts.childElementCount) children.push(facts);
   const description = el('div', 'description');
   description.append(sanitizeDescription(info.description));
+  description.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLElement>('.seek-time');
+    if (b) seekTo(Number(b.dataset.seconds));
+  });
   children.push(description);
   root.replaceChildren(...children);
 }

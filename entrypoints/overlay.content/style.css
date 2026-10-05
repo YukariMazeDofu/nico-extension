@@ -792,6 +792,14 @@ option {
   font-size: 13px;
   line-height: 1.7;
   overflow-wrap: anywhere;
+
+  & .seek-time {
+    color: var(--link);
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 /* コメント一覧タブ。行の高さは固定 */
