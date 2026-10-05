@@ -54,6 +54,22 @@
 - **確かめ方**: `ext_probe.py`（再生とコメント）、`layout_probe.py`（上段とパネル）、`post_probe.py`（投稿欄の状態）。必須のパスの検査は、存在しないパスを `REQUIRED_PATHS` に一時的に足したビルドで、オーバーレイにそのパスが出ることを見る。
 - **壊れたとき**: 必須のパスが変わると「読み込めませんでした（server-response: data.response.… is not …）」。任意のパスが変わると、上段・右パネルの項目が出なくなる。
 
+## 説明文の再生位置
+
+`video.description` の HTML では、投稿者が書いた再生位置が次の `a` になっている。
+
+```html
+<a href="#" class="seekTime" data-seekTime="00:21" onclick="seekNicoPlayer('#00:21'); return false;">#00:21</a>
+```
+
+- `data-seekTime` は `mm:ss`。HTML として読むと属性名は `data-seektime` になる。
+- 1 時間以上の位置の形（`h:mm:ss` か）は未確認。
+
+- **確認**: 2026-10-05、`sm46878133`、未ログイン。
+- **コード**: `entrypoints/overlay.content/info.ts`（`sanitizeDescription`）。
+- **確かめ方**: [説明文の再生位置](../extension/behavior.md#説明文の再生位置)。
+- **壊れたとき**: 説明文の再生位置がボタンにならず、文字か新しいタブで開くリンクになる。
+
 ## 取得できない動画
 
 | 動画 | HTTP | `meta.code` | `data.response` |
