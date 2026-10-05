@@ -144,7 +144,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { actions
   container.append(layout);
   player.context.then(
     (ctx) => {
-      renderHeader(headerBody, ctx.data);
+      renderHeader(headerBody, ctx.data, showOsd);
       renderPanel(details, ctx.data.info, (t) => (video.currentTime = t));
     },
     () => (headerBody.textContent = ''),

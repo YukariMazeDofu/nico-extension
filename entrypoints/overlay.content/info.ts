@@ -82,8 +82,11 @@ function stat(name: IconName, label: string, value: number) {
   return e;
 }
 
-/** 上段: タイトル・投稿日時と各カウント（いいね！を除く）・タグ */
-export function renderHeader(root: HTMLElement, w: WatchData) {
+/** `[動画名](URL)`。動画名の `\`・`[`・`]` は前に `\` を付ける。 */
+const markdownLink = (title: string, url: string) => `[${title.replace(/[\\[\]]/g, '\\$&')}](${url})`;
+
+/** 上段: タイトル・投稿日時と各カウント（いいね！を除く）・タグ。タイトルを押すと Markdown のリンクをコピーし、結果を `notify` に渡す。 */
+export function renderHeader(root: HTMLElement, w: WatchData, notify: (msg: string) => void) {
   const { info } = w;
   const meta = el('div', 'meta');
   meta.append(
@@ -102,7 +105,13 @@ export function renderHeader(root: HTMLElement, w: WatchData) {
     tags.append(a);
   }
   const title = el('h1', 'title', w.title);
-  title.title = w.title;
+  title.title = `${w.title}\nクリックで Markdown のリンクをコピー`;
+  title.addEventListener('click', () =>
+    navigator.clipboard.writeText(markdownLink(w.title, watchUrl(w.videoId))).then(
+      () => notify('リンクをコピーしました'),
+      () => notify('リンクをコピーできませんでした'),
+    ),
+  );
   root.replaceChildren(title, meta, tags);
 }
 
