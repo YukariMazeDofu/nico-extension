@@ -28,14 +28,14 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | API | `lib/nico/keys.ts` | `comment/keys/*` の鍵の使い回しと再送 |
 | API | `lib/nico/post.ts`・`nicoru.ts` | 投稿、ニコる・取り消し、それぞれの可否 |
 | API | `lib/nico/like.ts` | いいね！・取り消し・お礼メッセージの取得 |
-| API | `lib/nico/link.ts` | リンク・パスから動画 ID を取る |
+| API | `lib/nico/link.ts` | リンク・パスから動画 ID を取る。URL の `from` を読む |
 | コメント | `lib/comment/spec.ts` | コマンドの解釈 |
 | コメント | `lib/comment/layout.ts` | 配置（1920×1080 の座標系） |
 | コメント | `lib/comment/timeline.ts` | `CommentRenderer` と、時刻に応じた出し入れ（`CommentTimeline`） |
 | コメント | `lib/comment/raster.ts`・`webgl-renderer.ts` | ビットマップ化と WebGL2 での描画 |
 | コメント | `lib/comment/ng.ts`・`heatmap.ts` | 共有 NG レベル、盛り上がりの振り分け |
 | 共通 | `lib/settings.ts` | `storage.local` の設定と `bindSetting` |
-| 共通 | `lib/resume.ts` | 前回の再生位置の記録（読み書き、1,000 件の上限、すべて消す）と、開いたときの再生の位置 |
+| 共通 | `lib/resume.ts` | 前回の再生位置の記録（読み書き、1,000 件の上限、すべて消す）と、開いたときの再生の位置（URL の `from`・設定・記録から決める） |
 | 共通 | `lib/log.ts` | `[nico-ext]` 付きのログ（`log.debug`・`info`・`warn`・`error`） |
 | UI | `entrypoints/overlay.content/index.ts` | リンクのクリック・直接開いたときの起動、オーバーレイの生成と片付け、Esc、訪問済み |
 | UI | `controls.ts` | 上段・動画とコントロール・右パネルの組み立て、コントロールのバー |
@@ -57,9 +57,9 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 
 ## データの流れ
 
-1. `index.ts` がリンクのクリック（または直接開いたパス）から動画 ID を得て、`createShadowRootUi` でオーバーレイを作る。オーバーレイごとに `AbortController` を 1 つ作る。
+1. `index.ts` がリンクのクリック（または直接開いたパス）から動画 ID と URL の `from` を得て、`createShadowRootUi` でオーバーレイを作る。オーバーレイごとに `AbortController` を 1 つ作る。
 1. `controls.ts` の `mountPlayerUi` が各モジュールを組み立て、`player.ts` が `WatchContext.load(videoId)`（watch ページの取得）を始める。この `Promise<WatchContext>` を各モジュールが受け取る。
-1. `player.ts`: 視聴イベントの `start` → `access-rights/hls` → hls.js で再生。開始の位置は `local:resumeStart` と前回の再生位置の記録から決める。
+1. `player.ts`: 視聴イベントの `start` → `access-rights/hls` → hls.js で再生。開始の位置は URL の `from`・`local:resumeStart`・前回の再生位置の記録から決める。
 1. `comments.ts`: コメントの表示と共有 NG レベルの設定を読んだあと、`/v1/threads` を取得する。取得したスレッドを次に渡す。
     - 共有 NG レベルで絞ったスレッド → コメント一覧（`comment-list.ts`）、`toSpec` → `layoutComments` → `CommentTimeline` → WebGL の描画器。
     - 絞る前のスレッドと `voltageZone.heatmap` → シークバー（`heatmap.ts`）。

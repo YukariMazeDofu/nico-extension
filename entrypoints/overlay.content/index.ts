@@ -1,5 +1,5 @@
 import './style.css';
-import { watchIdFromAnchor, watchIdFromDirectPath } from '@/lib/nico/link';
+import { fromSecOf, watchIdFromAnchor, watchIdFromDirectPath } from '@/lib/nico/link';
 import { officialWatchUrl, watchPath, watchUrl } from '@/lib/nico/urls';
 import { mountPlayerUi, type PlayerUi } from './controls';
 import { el, iconButton } from './dom';
@@ -38,6 +38,7 @@ export default defineContentScript({
     const open = async (videoId: string, href?: string) => {
       close?.();
       markVisited([watchUrl(videoId), ...(href ? [href] : [])]);
+      const from = fromSecOf(href ?? location.href);
       const ui = await createShadowRootUi<AbortController>(ctx, {
         name: 'nico-ext-overlay',
         position: 'modal',
@@ -66,12 +67,12 @@ export default defineContentScript({
             const id = a && watchIdFromAnchor(a);
             if (!id) return;
             e.preventDefault();
-            if (directId) location.assign(watchUrl(id));
+            if (directId) location.assign(a.href);
             else open(id, a.href);
           });
           const { signal } = controller;
           const theme = mountThemeSwitch(backdrop, signal);
-          playerUi = mountPlayerUi(backdrop, videoId, { actions: [theme, official, button], signal });
+          playerUi = mountPlayerUi(backdrop, videoId, { actions: [theme, official, button], signal, from });
           return controller;
         },
         onRemove(controller) {

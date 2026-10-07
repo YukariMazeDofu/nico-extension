@@ -155,6 +155,37 @@ async def main(a):
         print("start from resume", "t", round(st["t"], 1), "marker", st["marker"] and st["marker"]["title"], "pressed", pressed,
               "ok" if st["t"] < 110 and st["marker"] and pressed == "前回の位置から" else "NG")
 
+        async def start_at(url=None, link=None):
+            """`url` を直接開くか、トップページに差し込んだ `link` をクリックして開き、開いた直後の `currentTime` を返す"""
+            await set_records(page, {vid: {"sec": 70, "at": 1}})
+            await page.goto(url or "https://www.nicovideo.jp/", wait_until="domcontentloaded")
+            if link:
+                await page.wait_for_timeout(3000)
+                await page.evaluate(f"""() => {{ const a = document.createElement('a'); a.id = 'probe'; a.href = '{link}'; a.textContent = 'probe';
+                    a.style.cssText = 'position:fixed;top:200px;left:0;z-index:2147483646'; document.body.append(a); }}""")
+                await page.click("#probe")
+            await page.wait_for_function(f"() => {SHADOW}?.querySelector('video')?.duration > 0", timeout=30000)
+            await page.wait_for_timeout(1500)
+            st = await page.evaluate(STATE)
+            await pause()
+            return st
+
+        def check(label, st, want):
+            m = st["marker"]
+            print("from", label, "t", round(st["t"], 1), "marker", m and m["title"], "ok" if want <= st["t"] < want + 3 and m else "NG")
+
+        watch = f"https://www.nicovideo.jp/watch/{vid}"
+        check("link ?from=30 resume", await start_at(link=f"/watch/{vid}?from=30&ref=my_nicoru_passive"), 30)
+        check("direct ?from=30 resume", await start_at(f"{watch}?from=30"), 30)
+        check("direct ?from=12.5", await start_at(f"{watch}?from=12.5"), 12)
+        check("direct ?from=0 resume", await start_at(f"{watch}?from=0"), 0)
+        check("direct ?from=1:23 resume", await start_at(f"{watch}?from=1:23"), 70)
+        check("direct ?from=99999 resume", await start_at(f"{watch}?from=99999"), 70)
+        await overlay.locator(".tab").nth(2).click()
+        await overlay.locator(".resume-start button", has_text="先頭から").click()
+        check("link ?from=30 head", await start_at(link=f"/watch/{vid}?from=30&ref=my_nicoru_passive"), 30)
+        check("direct ?from=1:23 head", await start_at(f"{watch}?from=1:23"), 0)
+
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

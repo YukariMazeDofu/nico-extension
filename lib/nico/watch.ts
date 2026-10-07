@@ -46,6 +46,8 @@ export interface CommentThreadInfo {
 export interface WatchData {
   videoId: string;
   title: string;
+  /** 動画の長さ（秒） */
+  duration?: number;
   info: VideoInfo;
   watchTrackId: string;
   nicosid: string;
@@ -67,6 +69,7 @@ interface ServerResponse {
     title: string;
     description: string;
     registeredAt: string;
+    duration?: number | null;
     count: VideoInfo['count'];
     viewer?: { like?: { isLiked?: boolean } | null } | null;
   };
@@ -158,6 +161,7 @@ export async function fetchWatchData(videoId: string): Promise<WatchData> {
   return {
     videoId,
     title: r.video.title,
+    duration: typeof r.video.duration === 'number' ? r.video.duration : undefined,
     info: videoInfoOf(r),
     watchTrackId: r.client.watchTrackId,
     nicosid: r.client.nicosid,

@@ -47,7 +47,14 @@ function levelForHeight(qualities: Quality[], maxHeight: number): number {
 }
 
 /** `signal` の abort でハートビートの `end` を送り、hls.js を止める。 */
-export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: PlayerHooks, signal: AbortSignal): Player {
+/** `from` は URL の再生位置（秒）。 */
+export function createPlayer(
+  video: HTMLVideoElement,
+  videoId: string,
+  from: number | undefined,
+  hooks: PlayerHooks,
+  signal: AbortSignal,
+): Player {
   let hls: Hls | undefined;
   let ctx: WatchContext | undefined;
   let tracker: WatchEventTracker | undefined;
@@ -56,7 +63,6 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
   let selectedLevel = AUTO_LEVEL;
   let settings: PlayerSettings | undefined;
   const context = WatchContext.load(videoId);
-  const start = startPositionOf(videoId);
 
   const save = (patch: Partial<PlayerSettings>) => {
     if (!settings) return;
@@ -156,7 +162,7 @@ export function createPlayer(video: HTMLVideoElement, videoId: string, hooks: Pl
     const url = await fetchHlsContentUrl(ctx.data);
     if (signal.aborted) return;
     log.debug('content url acquired');
-    attach(url, await start);
+    attach(url, await startPositionOf(videoId, from, ctx.data.duration));
     await video.play().catch((e) => log.info(`play() rejected: ${e}`));
   })().catch((e) => {
     log.error(`load failed: ${e}`);
