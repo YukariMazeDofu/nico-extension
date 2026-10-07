@@ -31,10 +31,12 @@ export interface PlayerUiOptions {
   actions: HTMLElement[];
   /** abort でプレイヤーを止め、登録したものをすべて外す */
   signal: AbortSignal;
+  /** URL の再生位置（秒） */
+  from?: number;
 }
 
 /** 上段・動画とコントロール・右パネルを `container` に組み立てる。 */
-export function mountPlayerUi(container: HTMLElement, videoId: string, { actions, signal }: PlayerUiOptions): PlayerUi {
+export function mountPlayerUi(container: HTMLElement, videoId: string, { actions, signal, from }: PlayerUiOptions): PlayerUi {
   const header = el('header', 'info');
   const headerBody = el('div', 'info-body', '読み込み中…');
   const headerActions = el('div', 'actions');
@@ -81,6 +83,7 @@ export function mountPlayerUi(container: HTMLElement, videoId: string, { actions
   const player = createPlayer(
     video,
     videoId,
+    from,
     {
       onQualityChange: () => renderQuality(),
       onError(msg) {

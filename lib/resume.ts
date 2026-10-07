@@ -27,8 +27,9 @@ function update(change: (records: ResumeRecords) => ResumeRecords): Promise<void
 
 export const readResume = async (videoId: string): Promise<ResumeEntry | undefined> => (await resumeRecords.getValue())[videoId];
 
-/** 開いたときの再生の位置（秒）。先頭なら -1 */
-export async function startPositionOf(videoId: string): Promise<number> {
+/** 開いたときの再生の位置（秒）。`from` が `duration` 未満ならその位置。先頭なら -1 */
+export async function startPositionOf(videoId: string, from?: number, duration = Infinity): Promise<number> {
+  if (from !== undefined && from < duration) return from;
   if ((await resumeStartSetting.getValue()) !== 'resume') return -1;
   return (await readResume(videoId))?.sec ?? -1;
 }

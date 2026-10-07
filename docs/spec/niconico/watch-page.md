@@ -22,7 +22,7 @@
 | `video.title` | ○ | `title` | 上段のタイトル、直接開いたときのタブのタイトル |
 | `video.description` | ○ | `info.description` | 説明文（HTML） |
 | `video.registeredAt` | ○ | `info.registeredAt` | 投稿日時 |
-| `video.duration` | | `duration` | 動画の長さ（秒）。[URL の再生位置](../extension/behavior.md#url-の再生位置未実装)の上限。ないときは上限を設けない |
+| `video.duration` | | `duration` | 動画の長さ（秒）。[URL の再生位置](../extension/behavior.md#url-の再生位置)の上限。ないときは上限を設けない |
 | `video.count`（`view`・`comment`・`mylist`・`like`） | ○ | `info.count` | 上段の各カウント（`like` は[いいね！の欄](../extension/behavior.md#いいね)） |
 | `video.viewer.like.isLiked` | | `liked` | いいね！の状態（[like.md](like.md)）。ないときは `false` |
 | `tag.items[]`（`name`・`isLocked`） | ○ | `info.tags` | タグ |
@@ -80,7 +80,7 @@
 
 - **確認**: 2026-10-07、`sm39244189`、未ログイン。
 - **コード**: `lib/nico/link.ts`。
-- **確かめ方**: [URL の再生位置](../extension/behavior.md#url-の再生位置未実装)。
+- **確かめ方**: [URL の再生位置](../extension/behavior.md#url-の再生位置)。
 - **壊れたとき**: ニコられた一覧などのリンクから開いても、その位置から再生しない。
 
 ## 取得できない動画
