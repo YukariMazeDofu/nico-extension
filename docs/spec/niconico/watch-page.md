@@ -22,6 +22,7 @@
 | `video.title` | ○ | `title` | 上段のタイトル、直接開いたときのタブのタイトル |
 | `video.description` | ○ | `info.description` | 説明文（HTML） |
 | `video.registeredAt` | ○ | `info.registeredAt` | 投稿日時 |
+| `video.duration` | | `duration` | 動画の長さ（秒）。[URL の再生位置](../extension/behavior.md#url-の再生位置未実装)の上限。ないときは上限を設けない |
 | `video.count`（`view`・`comment`・`mylist`・`like`） | ○ | `info.count` | 上段の各カウント（`like` は[いいね！の欄](../extension/behavior.md#いいね)） |
 | `video.viewer.like.isLiked` | | `liked` | いいね！の状態（[like.md](like.md)）。ないときは `false` |
 | `tag.items[]`（`name`・`isLocked`） | ○ | `info.tags` | タグ |
@@ -69,6 +70,18 @@
 - **コード**: `entrypoints/overlay.content/info.ts`（`sanitizeDescription`）。
 - **確かめ方**: [説明文の再生位置](../extension/behavior.md#説明文の再生位置)。
 - **壊れたとき**: 説明文の再生位置がボタンにならず、文字か新しいタブで開くリンクになる。
+
+## URL の再生位置
+
+`/watch/{id}?from={秒}` を開くと、公式プレイヤーはその秒数から再生する。ニコられた一覧のリンクがこの形になっている（`?from=400&ref=my_nicoru_passive`）。
+
+- watch ページの `server-response` の `player.initialPlayback` が `{type: 'from', positionSec}` になる。`positionSec` は値の先頭の整数で、`12.5` は 12、`1:23` は 1、`400s` は 400、`-5` は -5、`abc` は 0。動画の長さを超える値もそのまま入る。
+- `from` がないとき、未ログインでは `initialPlayback` が `null`。
+
+- **確認**: 2026-10-07、`sm39244189`、未ログイン。
+- **コード**: `lib/nico/link.ts`。
+- **確かめ方**: [URL の再生位置](../extension/behavior.md#url-の再生位置未実装)。
+- **壊れたとき**: ニコられた一覧などのリンクから開いても、その位置から再生しない。
 
 ## 取得できない動画
 
