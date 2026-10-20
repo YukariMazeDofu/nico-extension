@@ -1,5 +1,5 @@
 import { jwtExpiresAt } from './jwt';
-import { fetchWatchData, type WatchData } from './watch';
+import { fetchWatchCommon, fetchWatchData, type WatchData } from './watch';
 
 const EXPIRY_MARGIN_MS = 30_000;
 
@@ -7,7 +7,7 @@ export type WatchToken = 'accessRightKey' | 'threadKey';
 
 const tokenOf = (w: WatchData, t: WatchToken) => (t === 'accessRightKey' ? w.accessRightKey : w.nvComment.threadKey);
 
-/** watch ページの値を保持し、期限が近いトークンを要求されたら watch ページを取り直す。 */
+/** watch データを保持し、期限が近いトークンを要求されたら common で取り直す。 */
 export class WatchContext {
   private refreshing?: Promise<WatchData>;
 
@@ -30,7 +30,7 @@ export class WatchContext {
   }
 
   refresh(): Promise<WatchData> {
-    this.refreshing ??= fetchWatchData(this.latest.videoId)
+    this.refreshing ??= fetchWatchCommon(this.latest)
       .then((d) => (this.latest = d))
       .finally(() => {
         this.refreshing = undefined;

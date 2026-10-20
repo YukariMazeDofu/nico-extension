@@ -1,12 +1,12 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0"]
+# dependencies = []
 # ///
 """拡張を読み込んだ headless Chromium（未ログイン）で、コメントの投稿欄を確かめる。
 投稿欄の状態（無効と理由の表示）、入力欄でのキー入力がショートカットにならないこと、Esc で入力欄から抜けること、
 Enter で入力欄に移ること、投稿欄を足したあとのコントロールの位置と動画に重ねたときの隠れ方を試す。
 未ログインでは投稿欄が無効なので、キー入力の確認では無効を外す。投稿はしない。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/post_probe.py .output/chrome-mv3 <video_id>"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/post_probe.py .output/chrome-mv3 <video_id>"""
 import argparse
 import asyncio
 

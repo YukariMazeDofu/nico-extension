@@ -1,12 +1,12 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0"]
+# dependencies = []
 # ///
 """拡張を読み込んだ headless Chromium（未ログイン）で、シークバーの盛り上がりの帯を確かめる。
 `/v1/threads` の応答の `voltageZone.heatmap` と、シークバーの `--heat` の明るさ（20 区間ごとの平均）を比べる。
 キャッシュ済みの範囲のマスクと、つまみの大きさも出す。
 設定タブでの表示・非表示の切り替え、強調のスライダー（キーで動かし、動画の操作にならないこと）、開き直したときの復元も試す。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/heatmap_probe.py .output/chrome-mv3 <video_id> [--shot out.png]"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/heatmap_probe.py .output/chrome-mv3 <video_id> [--shot out.png]"""
 import argparse
 import asyncio
 import json
@@ -52,6 +52,8 @@ async def main(a):
         await page.goto(f"https://www.nicovideo.jp/watch/{a.video_id}", wait_until="domcontentloaded")
         await page.wait_for_timeout(5000)
         await page.wait_for_function(f"() => {SHADOW}?.querySelector('.seek.heat')", timeout=20000)
+        await page.wait_for_function(f"() => {SHADOW}.querySelector('video').buffered.length > 0", timeout=20000)
+        await page.wait_for_timeout(500)
         print("voltageZone.heatmap", heatmap)
         st = await page.evaluate(STATE)
         t = levels(st["heat"])

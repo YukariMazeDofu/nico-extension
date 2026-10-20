@@ -1,7 +1,7 @@
 import { NicoApiError } from './api';
 import { sendToThread } from './comment';
 import { dropCommentKey, withCommentKey } from './keys';
-import type { CommentThreadInfo, WatchData } from './watch';
+import { type CommentThreadInfo, isRestrictedThread, type PostNgReason, type WatchData } from './watch';
 
 /** 投稿できない理由 */
 export type PostBlock = 'notLoggedIn' | 'noThread' | 'banned' | 'restricted';
@@ -13,7 +13,7 @@ export class ChallengeRequiredError extends Error {
   }
 }
 
-/** チャンネル・コミュニティの動画のスレッドに `184` を付けた */
+/** `is184Forced` のスレッドに `184` を付けた */
 export class Invalid184Error extends Error {
   constructor() {
     super('184 is not allowed');
@@ -37,23 +37,30 @@ export interface PostedComment {
   shouldRefreshKey?: boolean;
 }
 
-const postThreadOf = (w: WatchData): CommentThreadInfo | undefined => w.commentThreads.find((t) => t.isDefaultPostTarget);
+const postThreadOf = (w: WatchData): CommentThreadInfo | undefined => w.commentThreads.find((t) => t.isPostTarget);
+
+const POST_NG_BLOCKS: Partial<Record<PostNgReason, PostBlock>> = {
+  userBanned: 'banned',
+  videoUnavailable: 'noThread',
+  channelRestriction: 'noThread',
+};
 
 export function postBlockOf(w: WatchData): PostBlock | undefined {
   if (!w.viewer) return 'notLoggedIn';
   const thread = postThreadOf(w);
   if (!thread) return 'noThread';
-  if (thread.postkeyStatus === 4) return 'banned';
-  if (thread.postkeyStatus === 5) return 'restricted';
+  const block = thread.postNgReason ? POST_NG_BLOCKS[thread.postNgReason] : undefined;
+  if (block) return block;
+  if (isRestrictedThread(thread)) return 'restricted';
   return undefined;
 }
 
-/** 通常のスレッドに投稿する。`184` のないコマンドには `184` を足す（`isThreadkeyRequired` のスレッドを除く）。 */
+/** 投稿先（`isPostTarget`）のスレッドに投稿する。`184` のないコマンドには `184` を足す（`is184Forced` のスレッドを除く）。 */
 export async function postComment(w: WatchData, draft: CommentDraft): Promise<PostedComment> {
   const thread = postThreadOf(w);
   if (!thread) throw new NicoApiError('no post target thread', 0);
   let commands = draft.commands;
-  if (thread.isThreadkeyRequired) {
+  if (thread.is184Forced) {
     if (commands.includes('184')) throw new Invalid184Error();
   } else if (!commands.includes('184')) {
     commands = [...commands, '184'];

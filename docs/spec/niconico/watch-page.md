@@ -16,7 +16,7 @@
 
 ## 使う値
 
-`data.response.$watchV4.data` のパスと `WatchData` の対応。**必須**のパスは `assertServerResponse` で型を確かめ、欠けると `server-response: data.response.$watchV4.data.{パス} is not {型}` のエラーでオーバーレイに「読み込めませんでした（…）」と出る。
+`data.response.$watchV4.data` のパスと `WatchData` の対応。**必須**のパスは `assertWatchResponse` で型を確かめ、欠けると `server-response: data.response.$watchV4.data.{パス} is not {型}` のエラーでオーバーレイに「読み込めませんでした（…）」と出る。
 
 | `data.response.$watchV4.data` のパス | 必須 | `WatchData` | 使い道 |
 | --- | --- | --- | --- |
@@ -57,7 +57,7 @@
 - チャンネル動画（`so38016254`）は `owner`・`main`（`label: default`）・`main`（`label: community`、`isPostTarget`・`is184Forced`）・`easy`（`is184Forced`）の 4 本。`sm9` は `owner`・`main`（`isPostTarget`）・`easy` の 3 本。
 
 - **確認**: 2026-10-20、`sm9`・`so38016254`・`sm27201969`、`server-response`（未ログイン・一般会員）。`comment.threads` の意味は `watch-v4-*.js`。`video.isLikedByViewer` は `PlayerCurrentTime-*.js`。
-- **コード**: `lib/nico/watch.ts`（`ServerResponse`・`REQUIRED_PATHS`・`videoInfoOf`）。
+- **コード**: `lib/nico/watch.ts`（`WatchResponse`・`REQUIRED_PATHS`・`watchDataOf`）。
 - **確かめ方**: `ext_probe.py`（再生とコメント）、`layout_probe.py`（上段とパネル）、`post_probe.py`（投稿欄の状態）。必須のパスの検査は、存在しないパスを `REQUIRED_PATHS` に一時的に足したビルドで、オーバーレイにそのパスが出ることを見る。
 - **壊れたとき**: 必須のパスが変わると「読み込めませんでした（server-response: data.response.$watchV4.data.… is not …）」。任意のパスが変わると、上段・右パネルの項目が出なくなる。
 
@@ -81,7 +81,7 @@
 - ログイン時、lazy を呼んだ動画が視聴履歴（`/my/history/video`）に載る。HTML の取得・common・`access-rights/hls`・視聴イベントでは載らない。
 
 - **確認**: 2026-10-20、`sm27201969`（ユーザー）・`so38016254`（チャンネル）・`sm46878133`、未ログイン・一般会員。視聴履歴は一般会員で各 API を単独で呼んで確かめた。判定は `watch-v4-*.js`。
-- **コード**: `lib/nico/watch.ts`（`fetchWatchLazy`）。
+- **コード**: `lib/nico/watch.ts`（`fetchOwnerAndSeries`）。
 - **確かめ方**: `layout_probe.py`（右パネルの投稿者）。シリーズの前後は実機の Chrome で見る。視聴履歴はログインした実機の Chrome で開いて `/my/history/video` を見る。
 - **壊れたとき**: 右パネルに投稿者・シリーズが出ない。console に `[nico-ext] watch lazy failed`。ログイン時に視聴履歴に載らない。
 

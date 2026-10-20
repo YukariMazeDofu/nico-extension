@@ -22,3 +22,19 @@ export async function nicoFetch<T>(what: string, url: string, init: RequestInit)
   if (!res.ok) throw new NicoApiError(`${what} failed`, res.status, json?.meta?.errorCode);
   return json?.data;
 }
+
+/** JSON のボディを `credentials: 'include'` で POST し、応答の `data` を返す。`headers` は `FRONTEND_HEADERS` と `Content-Type` に足す。 */
+export function postNvapi<T>(
+  what: string,
+  url: string,
+  body: unknown,
+  { headers = {}, keepalive = false }: { headers?: Record<string, string>; keepalive?: boolean } = {},
+): Promise<T> {
+  return nicoFetch<T>(what, url, {
+    method: 'POST',
+    credentials: 'include',
+    keepalive,
+    headers: { ...FRONTEND_HEADERS, 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+  });
+}

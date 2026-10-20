@@ -2,7 +2,7 @@ import { FRONTEND_HEADERS, nicoFetch } from './api';
 import { type CommentFork, type NvComment, sendToThread } from './comment';
 import { withCommentKey } from './keys';
 import { NVAPI } from './urls';
-import type { WatchData } from './watch';
+import { isRestrictedThread, type WatchData } from './watch';
 
 /** ニコれない理由 */
 export type NicoruBlock = 'notLoggedIn' | 'owner' | 'restricted';
@@ -16,7 +16,7 @@ export function nicoruBlockOf(w: WatchData, threadId: string, fork: CommentFork)
   if (!w.viewer) return 'notLoggedIn';
   if (fork === 'owner') return 'owner';
   const thread = w.commentThreads.find((t) => t.id === threadId && t.fork === fork);
-  if (thread?.postkeyStatus === 5) return 'restricted';
+  if (thread && isRestrictedThread(thread)) return 'restricted';
   return undefined;
 }
 

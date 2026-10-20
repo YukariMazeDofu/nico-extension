@@ -1,11 +1,11 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0", "pillow==12.1.0"]
+# dependencies = ["pillow==12.1.0"]
 # ///
 """拡張を読み込んだ headless Chromium で、自作プレイヤーで開いた動画のリンクが訪問済みの見た目になることを確かめる。
 ランキングのページで動画タイトルのリンク（訪問済みで灰色になるもの）をクリックしてオーバーレイを開いて閉じ、リンクの文字色（最も暗い画素）を開く前と比べる。
 `/watch/{id}` を直接開いた動画も、ランキングのページに戻ってから同じように比べる。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/visited_probe.py .output/chrome-mv3"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/visited_probe.py .output/chrome-mv3"""
 import argparse
 import asyncio
 import io

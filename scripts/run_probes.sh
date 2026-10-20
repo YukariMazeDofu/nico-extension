@@ -1,5 +1,5 @@
 #!/bin/sh
-# プローブを同時に流し、各プローブの出力を <outdir>/<name>.txt に保存する。拡張は .output/chrome-mv3 のビルドを使う。
+# Playwright の Chromium を入れてからプローブを同時に流し、各プローブの出力を <outdir>/<name>.txt に保存する。拡張は .output/chrome-mv3 のビルドを使う。
 # usage: [PLAYWRIGHT_BROWSERS_PATH=<dir>] sh scripts/run_probes.sh <outdir> [ext direct visited layout post list ng heatmap resume description title]
 OUT=$1
 shift
@@ -7,11 +7,14 @@ mkdir -p "$OUT" && OUT=$(cd "$OUT" && pwd) || exit 1
 cd "$(dirname "$0")/.." || exit 1
 E=.output/chrome-mv3
 PROBES=${*:-"ext direct visited layout post list ng heatmap resume description title"}
+R=scripts/requirements.txt
+
+uv run --with-requirements $R playwright install chromium || exit 1
 
 run() {
   name=$1
   shift
-  uv run "$@" >"$OUT/$name.txt" 2>&1
+  uv run --with-requirements $R "$@" >"$OUT/$name.txt" 2>&1
   echo "exit $?" >>"$OUT/$name.txt"
 }
 

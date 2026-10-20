@@ -4,16 +4,16 @@ import { log } from '@/lib/log';
 import { NicoApiError } from '@/lib/nico/api';
 import { WatchEventTracker } from '@/lib/nico/heartbeat';
 import { WatchContext } from '@/lib/nico/session';
-import { type DomandVariant, fetchHlsContentUrl, WATCH_API_V4 } from '@/lib/nico/watch';
+import { type DomandVariant, fetchHlsContentUrl, WATCH_API_V3 } from '@/lib/nico/watch';
 import { startPositionOf } from '@/lib/resume';
 import { type PlayerSettings, playerSettings } from '@/lib/settings';
 
 const workerPath = URL.createObjectURL(new Blob([hlsWorkerSource], { type: 'text/javascript' }));
 
 const RECOVER_INTERVAL_MS = 30_000;
-const WATCH_API_V4_MESSAGE = 'ニコニコ動画の視聴の仕組みが変わりました。拡張の更新が必要です。「公式で開く」で再生できます';
+const WATCH_API_V3_MESSAGE = 'ニコニコ動画の視聴の仕組みが変わりました。拡張の更新が必要です。「公式で開く」で再生できます';
 
-const isWatchApiV4 = (e: unknown) => e instanceof NicoApiError && e.code === WATCH_API_V4;
+const isWatchApiV3 = (e: unknown) => e instanceof NicoApiError && e.code === WATCH_API_V3;
 
 export const AUTO_LEVEL = -1;
 
@@ -124,7 +124,7 @@ export function createPlayer(
       if (!paused) await video.play().catch((e) => log.info(`play() rejected: ${e}`));
     } catch (e) {
       log.error(`recover failed: ${e}`);
-      hooks.onError(isWatchApiV4(e) ? WATCH_API_V4_MESSAGE : '再生できなくなりました');
+      hooks.onError('再生できなくなりました');
     }
   };
 
@@ -157,7 +157,7 @@ export function createPlayer(
     ctx = await context;
     if (signal.aborted) return;
     log.info(`watch data: ${ctx.data.videos.length} videos, ${ctx.data.audios.length} audios`);
-    tracker = new WatchEventTracker(ctx);
+    tracker = new WatchEventTracker(ctx.data);
     tracker.start();
     const url = await fetchHlsContentUrl(ctx.data);
     if (signal.aborted) return;
@@ -166,7 +166,7 @@ export function createPlayer(
     await video.play().catch((e) => log.info(`play() rejected: ${e}`));
   })().catch((e) => {
     log.error(`load failed: ${e}`);
-    hooks.onError(isWatchApiV4(e) ? WATCH_API_V4_MESSAGE : `読み込めませんでした（${e.code ?? e.message}）`);
+    hooks.onError(isWatchApiV3(e) ? WATCH_API_V3_MESSAGE : `読み込めませんでした（${e.code ?? e.message}）`);
   });
 
   return {

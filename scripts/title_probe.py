@@ -1,10 +1,10 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0"]
+# dependencies = []
 # ///
 """拡張を読み込んだ headless Chromium（未ログイン）で、動画名のコピーを確かめる。
 クリップボードの書き込みを許可してタイトルを押したときのクリップボードの文字と OSD、書き込みを拒んで押したときの OSD を見る。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/title_probe.py .output/chrome-mv3 <video_id>"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/title_probe.py .output/chrome-mv3 <video_id>"""
 import argparse
 import asyncio
 import re
@@ -17,7 +17,7 @@ EXPECTED_TITLE = """async (id) => {
     const html = await (await fetch(`https://www.nicovideo.jp/watch/${id}?nico-ext=off`, {credentials: 'include'})).text();
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const res = JSON.parse(doc.querySelector('meta[name="server-response"]').content);
-    return res.data.response.video.title; }"""
+    return res.data.response.$watchV4.data.video.title; }"""
 TITLE = f"""() => {{ const t = {SHADOW}.querySelector('.title');
     return {{text: t.textContent, title: t.title, cursor: getComputedStyle(t).cursor}}; }}"""
 OSD = f"() => {SHADOW}.querySelector('.osd').textContent"
