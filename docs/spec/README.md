@@ -8,9 +8,9 @@
 | 動作 | [extension/behavior.md](extension/behavior.md) | 起動・画面・操作・`storage.local` のキー・制約と、それぞれの確かめ方 |
 | 設計 | [extension/architecture.md](extension/architecture.md) | マニフェスト・層とモジュールの対応・データの流れ・コメントの描画 |
 | 検証 | [extension/testing.md](extension/testing.md) | 型チェック・ビルド・プローブ |
-| ニコニコの仕組み | [niconico/watch-page.md](niconico/watch-page.md) | watch ページの `server-response` のうち使う値と `WatchData` の対応、v4 の判定、トークンの期限 |
+| ニコニコの仕組み | [niconico/watch-page.md](niconico/watch-page.md) | watch ページの `server-response` のうち使う値と `WatchData` の対応、lazy・common、v3 の検知、トークンの期限 |
 | ニコニコの仕組み | [niconico/domand-hls.md](niconico/domand-hls.md) | `access-rights/hls`・Cookie・鍵・セグメント・有効期限 |
-| ニコニコの仕組み | [niconico/heartbeat.md](niconico/heartbeat.md) | 視聴イベント（`eventType`・`method`・受理の判定） |
+| ニコニコの仕組み | [niconico/heartbeat.md](niconico/heartbeat.md) | 視聴イベント（`/v4/watch/{id}`・`eventType`・`method`・受理の判定） |
 | ニコニコの仕組み | [niconico/nvcomment.md](niconico/nvcomment.md) | コメントの取得・投稿・ニコる・鍵・エラーコード・共有 NG レベル・`voltageZone` |
 | ニコニコの仕組み | [niconico/comment-render.md](niconico/comment-render.md) | コマンド・配置の基準値・ニコスクリプト |
 | ニコニコの仕組み | [niconico/like.md](niconico/like.md) | いいね！・取り消しと開いたときの状態、お礼メッセージ |
@@ -50,15 +50,17 @@
 | --- | --- |
 | 動画 ID | `sm`・`nm`・`so` に数字が続く ID（`sm9` など）。拡張はこの形だけを扱う |
 | watch ページ | `https://www.nicovideo.jp/watch/{動画 ID}`。公式プレイヤーのページ |
-| `server-response` | watch ページの HTML の `<meta name="server-response">`。再生とコメントに要る値がすべて入る JSON |
+| `server-response` | watch ページの HTML の `<meta name="server-response">`。再生とコメントに要る値が `data.response.$watchV4.data` に入る JSON |
 | domand | 動画の配信の仕組み。HLS（fMP4・AES-128）で配る |
 | `accessRightKey` | `access-rights/hls` に送る JWT。約 10 分で切れる |
 | `threadKey` | コメントの取得に送る JWT。約 8 分で切れる |
 | nvcomment | コメントのサーバー（`public.nvcomment.nicovideo.jp`） |
-| nvapi | `nvapi.nicovideo.jp`。`access-rights/hls`・コメントの鍵・ニコるの取り消し・いいね！の API |
+| nvapi | `nvapi.nicovideo.jp`。`access-rights/hls`・lazy・common・視聴イベント・コメントの鍵・ニコるの取り消し・いいね！の API |
 | fork | コメントのスレッドの種類。`owner`（投稿者コメント）・`main`（通常）・`easy`（かんたんコメント） |
 | `vposMs` | コメントの動画上の時刻（ミリ秒） |
-| 視聴イベント | `access-rights/hls` に送るハートビート（`start`・`play`・`impression`・`end`） |
+| lazy | `nvapi /v4/watch/lazy/{id}`。投稿者・シリーズを返す。ログイン時は呼んだ動画が視聴履歴に載る |
+| common | `nvapi /v4/watch/{id}`（`heartbeat.method: "common"`）。watch データを取り直す |
+| 視聴イベント | `/v4/watch/{id}` に送るハートビート（`start`・`play`・`impression`・`end`） |
 | ニコスクリプト | 投稿者コメントのうち `@`・`＠` で始まる命令（`＠置換` など） |
 | 共有 NG レベル | コメントの `score` で、ほかの視聴者の NG 登録が多いコメントを隠す設定 |
 | `voltageZone` | コメントの取得の応答に入る、動画を 20 等分した区間ごとの盛り上がりの値 |
@@ -81,6 +83,7 @@
 | --- | --- |
 | コメントの取得・投稿・ニコる・共有 NG レベル・ニコスクリプト・`voltageZone` の表示 | `PlayerSeekBar-*.js` |
 | nvapi のクライアント（`comment/keys/*`・ニコるの取り消し・いいね！） | `enum-*.js` |
+| watch データの形・lazy・common・視聴イベント・投稿先の判定 | `watch-v4-*.js` |
 | 視聴イベント | `PlayerVolumeBar-*.js`・`PlayerCurrentTime-*.js` |
 | 配色（`--colors-*`） | `root-*.css` |
 
@@ -98,6 +101,8 @@
 1. `actionTrackId` に `client.watchTrackId` 以外の値を使えるか。`X-Request-With` の値の制約。
 1. 投稿のチャレンジ（Cloudflare Turnstile）が求められる条件。
 1. 年齢制限・チャンネル限定・プレミアム限定の動画の `server-response` と `access-rights/hls` の応答。
+1. `postNgReason` の値の全体と、`syncBufferTime` が `400` になる条件。
+1. ログイン状態での投稿・ニコる・いいね！の API が v4 の公式で変わったか。
 1. 自分の投稿をニコれるか。
 1. いいね！していない動画で、お礼メッセージの取得（`GET /v1/users/me/likes/items`）が何を返すか。
 1. コメント描画に関するドワンゴの特許の扱い。[niconicomments](https://github.com/xpadev-net/niconicomments) の README に、抵触しうる旨の注意書きがある。
@@ -106,9 +111,10 @@
 
 | 症状 | 見る節 |
 | --- | --- |
-| オーバーレイに「読み込めませんでした（server-response: data.response.… is not …）」 | [watch-page.md](niconico/watch-page.md#使う値) |
+| オーバーレイに「読み込めませんでした（server-response: data.response.$watchV4.data.… is not …）」 | [watch-page.md](niconico/watch-page.md#使う値) |
 | オーバーレイに「読み込めませんでした（FORBIDDEN）」「（NOT_FOUND）」 | [watch-page.md](niconico/watch-page.md#取得できない動画) |
-| オーバーレイに「ニコニコ動画の視聴の仕組みが変わりました。拡張の更新が必要です。…」 | [watch-page.md](niconico/watch-page.md#v4) |
+| オーバーレイに「ニコニコ動画の視聴の仕組みが変わりました。拡張の更新が必要です。…」 | [watch-page.md](niconico/watch-page.md#v3-の検知) |
+| 右パネルに投稿者・シリーズが出ない、console に `[nico-ext] watch lazy failed` | [watch-page.md](niconico/watch-page.md#lazy) |
 | オーバーレイに「読み込めませんでした（INVALID_PARAMETER）」など、`access-rights/hls failed` | [domand-hls.md](niconico/domand-hls.md#再生用セッション) |
 | 再生中に「再生できなくなりました」 | [domand-hls.md](niconico/domand-hls.md#エラーからの復帰) |
 | 鍵（`keys/*.key`）が 403 | [domand-hls.md](niconico/domand-hls.md#cookie-と認証) |

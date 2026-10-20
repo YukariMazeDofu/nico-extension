@@ -4,7 +4,7 @@
 
 | 順 | 通信 | 内容 |
 | --- | --- | --- |
-| 1 | `GET www.nicovideo.jp/watch/{id}` | `accessRightKey`・variant の一覧・`watchTrackId`（[watch-page.md](watch-page.md)） |
+| 1 | `GET www.nicovideo.jp/watch/{id}` | `media.accessRightKey`・variant の一覧（`media.contents`）・`watchTrackId`（[watch-page.md](watch-page.md)） |
 | 2 | `POST nvapi.nicovideo.jp/v1/watch/{id}/access-rights/hls?actionTrackId={watchTrackId}` | 再生用セッション。master playlist の URL と `domand_bid` の Cookie |
 | 3 | `GET delivery.domand.nicovideo.jp/hlsbid/{id}/playlists/variants/….m3u8?session=…&Policy=…&Signature=…&Key-Pair-Id=…` | master playlist |
 | 4 | `GET …/playlists/media/{video,audio}-….m3u8`、`GET …/keys/{variant}.key` | media playlist と AES-128 の鍵（16 バイト、variant ごとに別 URL） |
@@ -12,7 +12,7 @@
 
 認証のパスは `/hlsbid/`（`domand_bid` だけを Cookie、残りはクエリ）。未ログインと一般会員で同じ。
 
-- **確認**: 2026-10-01（未ログイン）・2026-10-02（一般会員）、`sm9`、公式プレイヤーの通信の記録。
+- **確認**: 2026-10-01（未ログイン）・2026-10-02（一般会員）、`sm9`、公式プレイヤーの通信の記録。2026-10-20、v4 の watch ページから `sm27201969` で 201。
 - **未確認**: プレミアム会員での画質の候補と認証のパス（`/hls/`・`/hlsext/` に変わるか）、チャンネル動画の鍵（アクセスごとに変わる `/shls…/`）。
 
 ## 再生用セッション
@@ -64,7 +64,7 @@
 
 ## エラーからの復帰
 
-- hls.js の fatal なネットワークエラーでは、`access-rights/hls` を呼び直して hls.js を作り直し、同じ位置から再生する。`accessRightKey` の期限が近ければ watch ページを取り直す。30 秒に 1 回まで。
+- hls.js の fatal なネットワークエラーでは、`access-rights/hls` を呼び直して hls.js を作り直し、同じ位置から再生する。`accessRightKey` の期限が近ければ [common](watch-page.md#取り直しcommon) で取り直す。30 秒に 1 回まで。
 - fatal なメディアエラーは `recoverMediaError()`。
 - 30 秒以内に 2 回目の fatal なネットワークエラーが起きたときと、呼び直しが失敗したときは、オーバーレイに「再生できなくなりました」と出す。
 
