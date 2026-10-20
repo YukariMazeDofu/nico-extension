@@ -1,7 +1,6 @@
 import { log } from '@/lib/log';
-import { FRONTEND_HEADERS, FRONTEND_ID, nicoFetch } from './api';
-import type { WatchContext } from './session';
-import { accessRightsHlsUrl, watchUrl } from './urls';
+import { FRONTEND_ID, postNvapi } from './api';
+import { watchApiUrl, watchUrl } from './urls';
 import type { WatchData } from './watch';
 
 export type WatchEventType = 'start' | 'play' | 'impression' | 'end';
@@ -22,45 +21,31 @@ function isoWithOffset(d: Date): string {
   return `${local}${offset >= 0 ? '+' : '-'}${pad(offset / 60)}:${pad(offset % 60)}`;
 }
 
-function heartbeatBody(w: WatchData, e: WatchEvent): string {
-  const video = w.videos.find((v) => v.isAvailable);
-  const audio = w.audios.find((a) => a.isAvailable);
+function heartbeatBody(w: WatchData, e: WatchEvent) {
   const method = w.viewer?.isPremium ? 'premium' : w.viewer ? 'regular' : 'guest';
-  return JSON.stringify({
-    outputs: [[video?.id, audio?.id].filter(Boolean)],
+  return {
+    actionTrackId: w.watchTrackId,
     heartbeat: { method, params: { ...e, eventOccurredAt: isoWithOffset(new Date()) } },
-  });
+  };
 }
 
-/** access-rights/hls に視聴イベントを送る。受理の確認は応答の `contentUrl` の `accepted` と `data` で行う。 */
-export async function sendWatchEvent(
-  w: WatchData,
-  accessRightKey: string | undefined,
-  e: WatchEvent,
-  { retries = 0, keepalive = false } = {},
-): Promise<void> {
+/** `/v4/watch/{id}` に視聴イベントを送る。受理の確認は応答の `responseType` と `media.hls.url` の `accepted`・`data` で行う。 */
+export async function sendWatchEvent(w: WatchData, e: WatchEvent, { retries = 0, keepalive = false } = {}): Promise<void> {
   const body = heartbeatBody(w, e);
   const accepted = btoa(`${FRONTEND_ID}:${w.videoId}:${w.watchTrackId}`);
   for (let retry = 0; ; retry++) {
     try {
-      const data = await nicoFetch<{ contentUrl?: string }>(
+      const data = await postNvapi<{ responseType?: string; media?: { hls?: { url?: string } | null } | null }>(
         `watch event ${e.eventType}`,
-        `${accessRightsHlsUrl(w.videoId, w.watchTrackId)}&__retry=${retry}`,
+        `${watchApiUrl(w.videoId)}?__retry=${retry}`,
+        body,
         {
-          method: 'POST',
-          credentials: 'include',
           keepalive,
-          headers: {
-            ...FRONTEND_HEADERS,
-            'Content-Type': 'application/json',
-            'X-Request-With': watchUrl(w.videoId),
-            ...(accessRightKey ? { 'X-Access-Right-Key': accessRightKey } : {}),
-          },
-          body,
+          headers: { Accept: 'application/json;charset=utf-8', 'X-Niconico-Language': 'ja-jp', 'X-Request-With': watchUrl(w.videoId) },
         },
       );
-      const q = new URLSearchParams(data?.contentUrl ?? '');
-      if (q.get('accepted') === 'true' && q.get('data') === accepted) return;
+      const q = new URLSearchParams(data?.media?.hls?.url?.split('?')[1] ?? '');
+      if (data?.responseType === 'heartbeat' && q.get('accepted') === 'true' && q.get('data') === accepted) return;
       throw new Error(`watch event ${e.eventType} rejected`);
     } catch (err) {
       if (retry >= retries) throw err;
@@ -71,16 +56,13 @@ export async function sendWatchEvent(
 
 /** 公式プレイヤーと同じ順序（start → play → impression → end）で各イベントを 1 回ずつ送る。 */
 export class WatchEventTracker {
-  private readonly watch: WatchData;
   private readonly sent = new Set<WatchEventType>();
   private queue = Promise.resolve();
   private watchMilliseconds = 0;
   private watchingSince?: number;
   private endCount = 0;
 
-  constructor(private readonly ctx: WatchContext) {
-    this.watch = ctx.data;
-  }
+  constructor(private readonly watch: WatchData) {}
 
   start() {
     this.send('start', {}, { retries: 3 });
@@ -124,9 +106,8 @@ export class WatchEventTracker {
       endCount: type === 'end' ? this.endCount : 0,
       additionalParameters: { ___pc_v: 1, nicosid: this.watch.nicosid, ...extra },
     };
-    const key = this.ctx.isFresh('accessRightKey') ? this.ctx.data.accessRightKey : undefined;
     this.queue = this.queue
-      .then(() => sendWatchEvent(this.watch, key, e, opts))
+      .then(() => sendWatchEvent(this.watch, e, opts))
       .then(() => log.debug(`watch event ${type} accepted`))
       .catch((err) => log.warn(`watch event ${type} failed: ${err}`));
   }

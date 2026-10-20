@@ -21,3 +21,7 @@ export const seriesUrl = (seriesId: number | string) => `${ORIGIN}/series/${seri
 
 export const accessRightsHlsUrl = (videoId: string, actionTrackId: string) =>
   `${NVAPI}/v1/watch/${videoId}/access-rights/hls?actionTrackId=${actionTrackId}`;
+
+export const watchApiUrl = (videoId: string) => `${NVAPI}/v4/watch/${videoId}`;
+
+export const watchLazyUrl = (videoId: string, actionTrackId: string) => `${NVAPI}/v4/watch/lazy/${videoId}?actionTrackId=${actionTrackId}`;

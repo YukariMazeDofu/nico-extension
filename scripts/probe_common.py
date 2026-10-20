@@ -1,5 +1,5 @@
 """プローブの共通部分。拡張を読み込んだ headless Chromium を起動する。
-`uv run scripts/<name>_probe.py` で実行したプローブから `from probe_common import ...` で読み込む。"""
+`uv run --with-requirements scripts/requirements.txt scripts/<name>_probe.py` で実行したプローブから `from probe_common import ...` で読み込む。"""
 import os
 import shutil
 import tempfile

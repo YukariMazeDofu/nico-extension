@@ -59,7 +59,7 @@ export function sendToThread<T>(w: WatchData, what: string, method: string, path
   });
 }
 
-/** `threadKey` が拒否されたら watch ページを取り直して 1 回だけ再試行する。 */
+/** `threadKey` が拒否されたら watch データを取り直して 1 回だけ再試行する。 */
 export async function fetchCommentThreads(ctx: WatchContext): Promise<NvThreadsResult> {
   try {
     return await postThreads(await ctx.fresh('threadKey'));

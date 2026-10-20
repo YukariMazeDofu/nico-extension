@@ -35,11 +35,11 @@
 
 - **確かめ方**: `visited_probe.py`。開いた動画のリンクの文字色が `(70, 70, 70)` → `(192, 192, 192)`、開いていない動画は変わらない。`url unchanged: True`・`history unchanged: True`。
 
-### v4 の検知
+### v3 の検知
 
-watch ページの `server-response` が [v4](../niconico/watch-page.md#v4) のとき、オーバーレイに「ニコニコ動画の視聴の仕組みが変わりました。拡張の更新が必要です。「公式で開く」で再生できます」と出し、再生しない。console に `[nico-ext] watch api v4 detected` を出す。再生中にトークンを取り直したときに v4 だった場合も、同じ文を出す。
+watch ページの `server-response` が [v3](../niconico/watch-page.md#v3-の検知) のとき、オーバーレイに「ニコニコ動画の視聴の仕組みが変わりました。拡張の更新が必要です。「公式で開く」で再生できます」と出し、再生しない。console に `[nico-ext] watch api v3 detected` を出す。
 
-- **確かめ方**: 使い捨てのスクリプトで、watch ページの応答の `server-response` を `{"meta":{"status":200},"data":{"response":{"$watchV4":{"data":{}}}}}` に差し替え、リンクを差し込んでクリックし、`.message` の文字と console を見る。差し替えないときは `ext_probe.py` が今までどおり通る。
+- **確かめ方**: 使い捨てのスクリプトで、watch ページの応答の `server-response` を `{"meta":{"status":200},"data":{"response":{"media":{"domand":{}}}}}` に差し替え、リンクを差し込んでクリックし、`.message` の文字と console を見る。差し替えないときは `ext_probe.py` が今までどおり通る。
 
 ## 画面
 
@@ -172,7 +172,7 @@ https://www.nicovideo.jp/watch/sm39244189?from=400&ref=my_nicoru_passive
 
 - 1 行目はいいね！のボタンと数。いいね！した動画は色を変えて `aria-pressed="true"` にする。
 - 押すと、いいね！していなければいいね！し、していれば取り消す（[like.md](../niconico/like.md)）。成功したら数を 1 増やす・減らす。送っている間はボタンを無効にする。
-- 開いたときの状態は `server-response` の `video.viewer.like.isLiked` と `video.count.like`（[watch-page.md](../niconico/watch-page.md#使う値)）。ほかのタブ・公式での変更には追従しない。
+- 開いたときの状態は `server-response` の `video.isLikedByViewer` と `video.count.like`（[watch-page.md](../niconico/watch-page.md#使う値)）。ほかのタブ・公式での変更には追従しない。
 - 失敗したら OSD に「「いいね！」に失敗しました ({errorCode か HTTP の状態})」（取り消しは「「いいね！」の取り消しに失敗しました (…)」）と出し、状態と数を変えない。
 - 2 行目からはお礼メッセージの欄。本文はテキストとして出し、改行を保つ。3 行を超えたら欄の中でスクロールする。
 

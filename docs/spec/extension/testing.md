@@ -12,7 +12,7 @@ mise exec -- pnpm build     # 出力は .output/chrome-mv3
 
 ## プローブ
 
-`scripts/*_probe.py`（PEP 723）。`uv run` で依存（Playwright 1.62.0 など）を解決し、`.output/chrome-mv3` のビルドを読み込んだ headless Chromium（未ログイン）で動かす。投稿とニコるは送らない。
+`scripts/*_probe.py`（PEP 723）。Playwright の版は `scripts/requirements.txt` に固定し、`uv run --with-requirements scripts/requirements.txt` で解決する。ほかの依存（`pillow` など）は各プローブの PEP 723 に書く。`.output/chrome-mv3` のビルドを読み込んだ headless Chromium（未ログイン）で動かす。投稿とニコるは送らない。
 
 | プローブ | 引数（`run_probes.sh` の値） | 確かめること |
 | --- | --- | --- |
@@ -31,16 +31,17 @@ mise exec -- pnpm build     # 出力は .output/chrome-mv3
 1 本だけ流すとき:
 
 ```sh
-PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ext_probe.py .output/chrome-mv3 https://www.nicovideo.jp/ 20 sm46871555 --recover
+PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt playwright install chromium
+PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/ext_probe.py .output/chrome-mv3 https://www.nicovideo.jp/ 20 sm46871555 --recover
 ```
 
-- `PLAYWRIGHT_BROWSERS_PATH` は Playwright の Chromium を置くディレクトリ。
+- `PLAYWRIGHT_BROWSERS_PATH` は Playwright の Chromium を置くディレクトリ。`playwright install chromium` は固定した版の Chromium がなければ取得し、あれば何もしない。
 - 共通部分は `scripts/probe_common.py`。`launch(ext, **options)` は拡張をプローブごとに一時ディレクトリへ複製して読み込み、静的な規則（`/watch/` のリダイレクト）が有効になるまで最大 30 秒待つ。ロケールは `ja-JP`、プロキシは環境変数 `HTTPS_PROXY` を渡す。
 - ネットワークの許可が要る環境では `*.nicovideo.jp`・`*.nimg.jp` を許可する。
 
 ## 変更の前後で比べる
 
-1. 変更前の main をビルドし、`PLAYWRIGHT_BROWSERS_PATH=<dir> sh scripts/run_probes.sh <基準の出力先>` を流す（11 本を同時に、約 5 分）。各プローブの出力は `<出力先>/<名前>.txt`、最後の行が `exit {終了コード}`。
+1. 変更前の main をビルドし、`PLAYWRIGHT_BROWSERS_PATH=<dir> sh scripts/run_probes.sh <基準の出力先>` を流す（11 本を同時に、約 5 分）。`run_probes.sh` は最初に `playwright install chromium` を流し、失敗したら止まる。各プローブの出力は `<出力先>/<名前>.txt`、最後の行が `exit {終了コード}`。
 1. 変更後にビルドして `run_probes.sh <変更後の出力先>` を流す。
 1. `sh scripts/cmp_probes.sh <基準> <変更後>` で差を見る。時刻・動画 ID・タイトル・処理時間を伏せて比べ、最後に視聴イベントとコメントの取得の件数を並べる。
 1. 差が期待どおりの変更だけなら一致とみなす。
@@ -60,7 +61,7 @@ PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ext_probe.py .output/chrome-mv3 ht
 - `ext_probe.py` に `/ranking` と動画 ID を渡すと、差し込んだリンクのクリックで公式の watch ページへ移って失敗する。ランキングの実際のリンク（動画 ID なし）とトップページでは通る。
 - headless では、ユーザー操作のない遷移（`page.goto`）で開くと自動再生が止められ、一時停止のまま開く。
 - headless では WebGL が SwiftShader（ソフトウェア）で動く。描画の性能は実機の Chrome で測る。
-- ページを離れるときの `keepalive` の fetch は Playwright の `request` イベントに出ない。数えるときは Chromium の `--log-net-log` を使う。
+- ページを離れるときの `keepalive` の fetch（視聴イベントの `end`）は Playwright の `request` イベントに出ない。数えるときは Chromium の `--log-net-log` を使う。
 
 ## 実機の Chrome での確認
 

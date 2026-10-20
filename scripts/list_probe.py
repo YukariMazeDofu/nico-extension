@@ -1,11 +1,11 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0"]
+# dependencies = []
 # ///
 """拡張を読み込んだ headless Chromium（未ログイン）で、右パネルのコメント一覧を確かめる。
 件数、並び順、再生位置への追従、時刻のクリックでの移動、ホバー中に追従しないこと、一覧の上のホイールで音量が変わらないこと、
 自動スクロールのオフと開き直したときの復元、未ログインでニコるが無効なこと、タブの切り替えと、開き直すと動画の詳細に戻ることを試す。ニコるは送らない。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/list_probe.py .output/chrome-mv3 <video_id> [--shot out.png]"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/list_probe.py .output/chrome-mv3 <video_id> [--shot out.png]"""
 import argparse
 import asyncio
 

@@ -1,11 +1,11 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0"]
+# dependencies = []
 # ///
 """拡張を読み込んだ headless Chromium で、`/watch/{id}` を直接開いたときの動作を確かめる。
 新しいタブ・ページ内の遷移・外部ページからの遷移・Ctrl+クリックで開いたときに自作プレイヤーで再生されること、
 アドレスバーの URL、再読み込み、閉じたときの戻り先、「公式で開く」を順に試す。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/direct_probe.py .output/chrome-mv3 <video_id>"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/direct_probe.py .output/chrome-mv3 <video_id>"""
 import argparse
 import asyncio
 

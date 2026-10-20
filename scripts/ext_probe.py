@@ -1,12 +1,12 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0"]
+# dependencies = []
 # ///
 """拡張を読み込んだ headless Chromium で nicovideo.jp のリンククリック→オーバーレイ再生を確かめる。
 video_id を渡すとそのリンクを差し込んでクリックし、省略するとページ内の最初の動画リンクをクリックする。
 再生後にページ要素との重なり、コメントの描画と表示 ON/OFF、上段・右パネル（いいね！の欄）とコントロールの配置、キーボードショートカット、ホイール操作、画質の切り替えを試し、--recover ではセグメントを一時的に 403 にして復帰を確かめる。
 --shot には再生後の画面を保存する。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ext_probe.py .output/chrome-mv3 <page_url> <seconds> [video_id] [--recover] [--shot out.png]"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/ext_probe.py .output/chrome-mv3 <page_url> <seconds> [video_id] [--recover] [--shot out.png]"""
 import argparse
 import asyncio
 import json
@@ -89,14 +89,20 @@ async def main(a):
         page.on("pageerror", lambda e: print("pageerror", e))
 
         def on_req(r):
-            if "access-rights/hls" in r.url and r.method == "POST":
-                ev = (json.loads(r.post_data or "{}").get("heartbeat") or {}).get("params", {}).get("eventType")
-                print("req  access-rights", ev or "session")
+            if r.method != "POST":
+                return
+            if "access-rights/hls" in r.url:
+                print("req  access-rights session")
+            elif "/v4/watch/lazy/" in r.url:
+                print("req  v4/watch lazy")
+            elif "/v4/watch/" in r.url:
+                hb = json.loads(r.post_data or "{}").get("heartbeat") or {}
+                print("req  v4/watch", (hb.get("params") or {}).get("eventType") or hb.get("method"))
         page.on("request", on_req)
 
         def on_resp(r):
             u = r.url
-            if ("domand" in u and "/keys/" in u or "/playlists/" in u) or "access-rights" in u:
+            if ("domand" in u and "/keys/" in u or "/playlists/" in u) or "access-rights" in u or "/v4/watch/" in u:
                 kind = u.rsplit("/", 1)[-1].split("?")[0]
                 print("resp", r.status, r.request.method, MASK.sub("", u).split("nicovideo.jp")[0] + "…/" + kind)
         page.on("response", on_resp)

@@ -1,11 +1,11 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0"]
+# dependencies = []
 # ///
 """拡張を読み込んだ headless Chromium で、オーバーレイの配置とテーマを確かめる。
 画面の大きさごとに、動画の枠が動画の縦横比に合うこと（黒い帯がないこと）、パネルの幅、ページ全体がはみ出さないことを測る。
 テーマはライト・ダーク・OS の設定に合わせるを切り替え、背景色と、開き直したときに設定が残ることを確かめる。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/layout_probe.py .output/chrome-mv3 <video_id> [--shots dir]"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/layout_probe.py .output/chrome-mv3 <video_id> [--shots dir]"""
 import argparse
 import asyncio
 import os

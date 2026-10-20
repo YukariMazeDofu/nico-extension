@@ -1,10 +1,10 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0"]
+# dependencies = []
 # ///
 """拡張を読み込んだ headless Chromium（未ログイン）で、前回の再生位置を確かめる。
 記録（`storage.local` の `resume`）は、CDP で content script の isolated world から読み書きする。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/resume_probe.py .output/chrome-mv3 <video_id>"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/resume_probe.py .output/chrome-mv3 <video_id>"""
 import argparse
 import asyncio
 import json

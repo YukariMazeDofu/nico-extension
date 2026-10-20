@@ -22,7 +22,7 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | API | `lib/nico/api.ts` | `X-Frontend-Id`・`X-Frontend-Version`、`nicoFetch`（応答の `data` を返し、失敗は `meta.errorCode` 付きの `NicoApiError`） |
 | API | `lib/nico/urls.ts` | URL の組み立て |
 | API | `lib/nico/watch.ts` | watch ページの取得（`WatchData`）、`access-rights/hls` |
-| API | `lib/nico/session.ts`・`jwt.ts` | `WatchContext`（トークンの期限が近ければ watch ページを取り直す） |
+| API | `lib/nico/session.ts`・`jwt.ts` | `WatchContext`（トークンの期限が近ければ common で取り直す） |
 | API | `lib/nico/heartbeat.ts` | 視聴イベント |
 | API | `lib/nico/comment.ts` | コメントの取得、nvcomment への書き込み |
 | API | `lib/nico/keys.ts` | `comment/keys/*` の鍵の使い回しと再送 |
@@ -58,7 +58,7 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 ## データの流れ
 
 1. `index.ts` がリンクのクリック（または直接開いたパス）から動画 ID と URL の `from` を得て、`createShadowRootUi` でオーバーレイを作る。オーバーレイごとに `AbortController` を 1 つ作る。
-1. `controls.ts` の `mountPlayerUi` が各モジュールを組み立て、`player.ts` が `WatchContext.load(videoId)`（watch ページの取得）を始める。この `Promise<WatchContext>` を各モジュールが受け取る。
+1. `controls.ts` の `mountPlayerUi` が各モジュールを組み立て、`player.ts` が `WatchContext.load(videoId)`（watch ページと lazy の取得）を始める。この `Promise<WatchContext>` を各モジュールが受け取る。
 1. `player.ts`: 視聴イベントの `start` → `access-rights/hls` → hls.js で再生。開始の位置は URL の `from`・`local:resumeStart`・前回の再生位置の記録から決める。
 1. `comments.ts`: コメントの表示と共有 NG レベルの設定を読んだあと、`/v1/threads` を取得する。取得したスレッドを次に渡す。
     - 共有 NG レベルで絞ったスレッド → コメント一覧（`comment-list.ts`）、`toSpec` → `layoutComments` → `CommentTimeline` → WebGL の描画器。
@@ -97,7 +97,7 @@ Chrome 専用の Manifest V3 拡張。WXT（TypeScript・Vite）でビルドし�
 | レベル | 出すもの | 例 |
 | --- | --- | --- |
 | `error` | 再生・コメントの表示が止まる失敗 | `load failed`・`recover failed`・`comments failed`・`comment renderer failed` |
-| `warn` | 一部の機能の失敗、検知した変化 | 投稿・ニコる・いいね！・お礼メッセージ・視聴イベント・`resume write`・コメントの取り直し・全画面の失敗、致命的な `hls error`、`watch api v4 detected` |
+| `warn` | 一部の機能の失敗、検知した変化 | 投稿・ニコる・いいね！・お礼メッセージ・視聴イベント・`resume write`・コメントの取り直し・全画面の失敗、致命的な `hls error`、`watch api v3 detected`・`watch lazy failed` |
 | `info` | 主な出来事 | `watch data`・`comments: …`・`access right key expired`・`session recreated`・`comment posted`・`nicoru`・`like`・`play() rejected` |
 | `debug` | 細かい経過 | `manifest parsed`・`level switched`・致命的でない `hls error`・`content url acquired`・`watch event … accepted`・`like: thanks message …` |
 

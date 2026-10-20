@@ -1,11 +1,11 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["playwright==1.62.0"]
+# dependencies = []
 # ///
 """拡張を読み込んだ headless Chromium（未ログイン）で、共有 NG レベルを確かめる。
 `/v1/threads` の応答の `score` から数えた件数と、一覧の件数・タブの title・流すコメントの件数（console のログ）を
 レベルごとに比べる。設定タブの選択の表示と、開き直したときの復元も試す。
-usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run scripts/ng_probe.py .output/chrome-mv3 <video_id> [--shot out.png]"""
+usage: PLAYWRIGHT_BROWSERS_PATH=<dir> uv run --with-requirements scripts/requirements.txt scripts/ng_probe.py .output/chrome-mv3 <video_id> [--shot out.png]"""
 import argparse
 import asyncio
 import json

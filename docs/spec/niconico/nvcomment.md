@@ -23,7 +23,7 @@
 
 - 応答にはほかに `data.globalComments` と `data.voltageZone`（[voltageZone](#voltagezone)）がある。
 - 返るのはスレッドごとの最新の約 1,000 件。easy のスレッドは返らない動画がある。
-- `threadKey` の期限が近ければ watch ページを取り直してから送る。4xx が返ったら watch ページを取り直して 1 回だけ再試行する。
+- `threadKey` の期限が近ければ watch データを取り直してから送る（[common](watch-page.md#取り直しcommon)）。4xx が返ったら取り直して 1 回だけ再試行する。
 
 - **確認**: 2026-10-01、`sm9`、未ログイン・一般会員（ヘッダとボディの構造は同じ）。[otya128 の nvcomment の仕様](https://gist.github.com/otya128/9c7499cf667e75964b43d46c8c567e37)（`/v1/threads`・`comment/keys/thread`、旧 API との差分）と一致する。
 - **コード**: `lib/nico/comment.ts`（`fetchCommentThreads`）。
@@ -52,10 +52,10 @@ nvcomment への書き込みは `{server}/v1/threads/{threadId}/…?pc=1`。ヘ�
 
 ## 投稿
 
-- 投稿先は `comment.threads` の `isDefaultPostTarget` のスレッド。
+- 投稿先は `comment.threads` の `isPostTarget` のスレッド。
 - `POST …/{threadId}/comments`、ボディは `videoId`・`commands`・`body`・`vposMs`・`postKey`。
 - `vposMs` は `Math.floor(video.currentTime * 1000)`。
-- `commands` に `184` がなければ足す。`isThreadkeyRequired` のスレッドでは足さず、`184` があれば送らずにエラーにする（「この動画では 184 を使えません」）。
+- `commands` に `184` がなければ足す。`is184Forced` のスレッドでは足さず、`184` があれば送らずにエラーにする（「この動画では 184 を使えません」）。
 - 応答は `data.id`・`data.no`・`data.shouldRefreshKey`。`shouldRefreshKey` が true なら鍵を捨てる。投稿のあとはコメントを取り直す。
 
 投稿させない条件（投稿欄を無効にして理由を出す）:
@@ -63,13 +63,13 @@ nvcomment への書き込みは `{server}/v1/threads/{threadId}/…?pc=1`。ヘ�
 | 条件 | 表示 |
 | --- | --- |
 | 未ログイン | ログインするとコメントできます |
-| 投稿先のスレッドがない | この動画にはコメントできません |
-| `postkeyStatus` 4 | コメントの投稿が制限されています |
-| `postkeyStatus` 5 | このアカウントではコメントを送れません。公式で開いて投稿してください |
+| 投稿先のスレッドがない、投稿先の `postNgReason` が `videoUnavailable`・`channelRestriction` | この動画にはコメントできません |
+| 投稿先の `postNgReason` が `userBanned` | コメントの投稿が制限されています |
+| 投稿先の `syncBufferTime` が `400` | このアカウントではコメントを送れません。公式で開いて投稿してください |
 
-`postkeyStatus` 5 では、公式は投稿を送らず `localStorage`（`@nvweb-packages/comments:htrzm`）に保存して自分の画面にだけ出す。
+`syncBufferTime` が `400` のスレッドでは、公式は投稿を送らず `localStorage`（`@nvweb-packages/comments:htrzm`）に保存して自分の画面にだけ出す。`postNgReason` のほかの値と、`syncBufferTime` が `400` になる条件は未確認。
 
-- **確認**: 2026-10-03、`PlayerSeekBar-*.js`。一般会員で `sm27201969` に投稿し、チャレンジは求められなかった。
+- **確認**: 2026-10-03、`PlayerSeekBar-*.js`。一般会員で `sm27201969` に投稿し、チャレンジは求められなかった。投稿先と投稿させない条件は 2026-10-20、`watch-v4-*.js`。
 - **コード**: `lib/nico/post.ts`（`postBlockOf`・`postComment`）、`entrypoints/overlay.content/post.ts`。
 - **確かめ方**: `post_probe.py`（未ログインで無効と理由の表示）。投稿そのものは実機の Chromeで `sm27201969` に送り、console の `[nico-ext] comment posted: {"id":…,"no":…}` と黄色の枠を見る。
 - **壊れたとき**: OSD に「投稿に失敗しました ({errorCode か HTTP の状態})」。ボディの形が変わると 400 `INVALID_PARAMETER`。
@@ -101,13 +101,13 @@ nvcomment への書き込みは `{server}/v1/threads/{threadId}/…?pc=1`。ヘ�
 | --- | --- |
 | 未ログイン | ログインするとニコれます |
 | 投稿者コメント（`owner`） | 投稿者コメントはニコれません |
-| `postkeyStatus` 5 | このアカウントではニコれません |
+| 対象のスレッドの `syncBufferTime` が `400` | このアカウントではニコれません |
 
 エラーの `FORBIDDEN`・`PREMIUM_ONLY` は「プレミアム会員のみニコれます」、それ以外は「ニコるに失敗しました ({errorCode か HTTP の状態})」と OSD に出す。
 
 自分の投稿にもニコるのボタンが押せる状態で出る。サーバーが受け付けるかは未確認。
 
-- **確認**: 2026-10-03、`PlayerSeekBar-*.js`・`enum-*.js`。一般会員でニコると取り消しを確認。
+- **確認**: 2026-10-03、`PlayerSeekBar-*.js`・`enum-*.js`。一般会員でニコると取り消しを確認。ニコらせない条件は 2026-10-20、`watch-v4-*.js`。
 - **コード**: `lib/nico/nicoru.ts`、`entrypoints/overlay.content/comment-list.ts`（`toggleNicoru`）。
 - **確かめ方**: `list_probe.py`（未ログインで無効と `title`）。ニコる・取り消しは実機の Chromeで行い、console の `[nico-ext] nicoru: {"nicoruId":…,"nicoruCount":…}` を見る。
 - **壊れたとき**: OSD に「ニコるに失敗しました (…)」。
