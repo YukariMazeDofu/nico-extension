@@ -53,9 +53,13 @@ LAYOUT = f"""() => {{ const r = {SHADOW}; const rect = (s) => r.querySelector(s)
       like: (b => b && {{disabled: b.disabled, pressed: b.getAttribute('aria-pressed'), title: b.title,
         message: r.querySelector('.like-message').textContent}})(r.querySelector('.like-button'))}}; }}"""
 
+FULLSCREEN = f"""() => {{ const r = {SHADOW}; const b = r.querySelector('.stage').getBoundingClientRect();
+    return {{fullscreen: !!document.fullscreenElement, stageCoversScreen: b.left <= 0 && b.top <= 0 && b.right >= innerWidth - 1 && b.bottom >= innerHeight - 1,
+      controlsPosition: getComputedStyle(r.querySelector('.controls')).position, videoFit: getComputedStyle(r.querySelector('video')).objectFit}}; }}"""
+
 
 async def check_layout(page):
-    """上段・右パネルといいね！の欄の表示、コントロールの位置と H での切り替え、右パネル上のホイールを確かめる。"""
+    """上段・右パネルといいね！の欄の表示、コントロールの位置と H での切り替え、右パネル上のホイール、全画面での動画の枠とコントロールの重ねを確かめる。"""
     print("layout:", await page.evaluate(LAYOUT))
     await page.keyboard.press("h")
     await page.mouse.move(400, 300)
@@ -72,6 +76,12 @@ async def check_layout(page):
     await page.mouse.wheel(0, 200)
     await page.wait_for_timeout(300)
     print("wheel on panel keeps volume:", vol == await page.evaluate(f"() => {SHADOW}.querySelector('video').volume"))
+    await page.keyboard.press("f")
+    await page.wait_for_timeout(700)
+    print("fullscreen:", await page.evaluate(FULLSCREEN))
+    await page.keyboard.press("f")
+    await page.wait_for_timeout(700)
+    print("layout:", await page.evaluate(LAYOUT))
 
 
 async def main(a):
