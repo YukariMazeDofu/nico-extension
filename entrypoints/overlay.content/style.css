@@ -311,6 +311,7 @@ video {
   display: block;
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 
 .message {
@@ -364,7 +365,8 @@ video {
   padding: 0 12px 8px;
   background: var(--player);
 
-  .player:not(.pinned) & {
+  .player:not(.pinned) &,
+  .player:fullscreen & {
     position: absolute;
     inset: auto 0 0;
     padding-top: 24px;
